@@ -215,6 +215,16 @@
   }
   .btn-microsoft:hover { border-color: #0078d4; background: rgba(0,120,212,0.05); }
   .btn-microsoft .ms-logo { width: 20px; height: 20px; }
+  .btn-google {
+    background: var(--bg-card);
+    border: 2px solid var(--border-strong);
+    color: var(--text-primary);
+    font-weight: 600;
+    padding: 14px 22px;
+  }
+  .btn-google:hover { border-color: #4285F4; background: rgba(66,133,244,0.05); }
+  .btn-google .g-logo { width: 20px; height: 20px; }
+  .btn-outline.provider-selected { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
 
   .auth-status {
     display: flex; align-items: center; gap: 10px;
@@ -556,7 +566,19 @@
   <!-- ======= SECTION 1: AUTH ======= -->
   <div class="section visible" id="section-auth">
 
-    <div class="card" id="msalCard">
+    <!-- Provider picker -->
+    <div id="providerPicker" style="display:flex; gap:10px; margin-bottom:16px;">
+      <button class="btn btn-outline" id="pickMsBtn" type="button" style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px;">
+        <svg style="width:18px;height:18px;flex-shrink:0;" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+        Microsoft
+      </button>
+      <button class="btn btn-outline" id="pickGoogleBtn" type="button" style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px;">
+        <svg style="width:18px;height:18px;flex-shrink:0;" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        Google
+      </button>
+    </div>
+
+    <div class="card" id="msalCard" style="display:none;">
       <div class="card-title">Connect to Microsoft</div>
       <div class="card-desc">Sign in with your Microsoft account to sync extracted namecards to Microsoft Contacts. Your session stays active for up to 90&nbsp;days.</div>
 
@@ -590,6 +612,41 @@
       </button>
 
       <div id="msalStatusMsg" style="text-align:center; margin-top:8px; font-size:13px; color:var(--text-secondary); display:none;"></div>
+    </div>
+
+    <!-- Google auth card -->
+    <div class="card" id="googleCard" style="display:none;">
+      <div class="card-title">Connect to Google</div>
+      <div class="card-desc">Sign in with your Google account to sync extracted namecards to Google Contacts. Note: the session token lasts 1&nbsp;hour — you'll need to sign in again each visit.</div>
+
+      <button class="instructions-toggle" id="gInstrToggle" type="button">
+        <i class="fas fa-chevron-right"></i> First-time setup (Google Cloud Console)
+      </button>
+      <div class="instructions-body" id="gInstrBody">
+        <ol>
+          <li>Go to <strong>Google Cloud Console</strong> &gt; <strong>APIs &amp; Services</strong> &gt; <strong>Library</strong> and enable the <strong>People API</strong></li>
+          <li>Go to <strong>OAuth consent screen</strong> &gt; External &gt; add scope <code>https://www.googleapis.com/auth/contacts</code></li>
+          <li>Go to <strong>Credentials</strong> &gt; <strong>Create OAuth Client ID</strong> &gt; <strong>Web application</strong> &gt; add this page&rsquo;s URL under <strong>Authorized JavaScript origins</strong></li>
+          <li>Copy the <strong>Client ID</strong> (ends in <code>.apps.googleusercontent.com</code>) and paste it below</li>
+        </ol>
+        <div style="margin-top:10px; padding:10px 12px; border-radius:8px; background:var(--accent-light); font-size:12px; line-height:1.6;">
+          <strong><i class="fas fa-circle-info"></i> Short-lived tokens</strong><br>
+          Unlike Microsoft, Google tokens last only <strong>1 hour</strong> and are not stored across page refreshes. You&rsquo;ll be prompted to sign in again on each visit. Your Client ID is saved so you won&rsquo;t need to re-enter it.
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:16px;">
+        <label>Google OAuth Client ID</label>
+        <input type="text" id="googleClientIdInput" name="google_client_id" placeholder="e.g. 123456789-abcd.apps.googleusercontent.com" autocomplete="one-time-code" data-form-type="other" data-lpignore="true">
+        <div class="hint">Found in Google Cloud Console &gt; Credentials</div>
+      </div>
+
+      <button class="btn btn-google btn-block" id="googleLoginBtn" type="button">
+        <svg class="g-logo" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        Sign in with Google
+      </button>
+
+      <div id="googleStatusMsg" style="text-align:center; margin-top:8px; font-size:13px; color:var(--text-secondary); display:none;"></div>
     </div>
 
     <!-- Session restored banner -->
@@ -748,7 +805,11 @@
         </button>
         <button class="btn btn-microsoft" id="syncMsBtn" type="button" style="flex:1;">
           <svg class="ms-logo" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
-          Sync to Contacts
+          Microsoft
+        </button>
+        <button class="btn btn-google" id="syncGoogleBtn" type="button" style="flex:1;">
+          <svg class="g-logo" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+          Google
         </button>
         <button class="btn btn-accent" id="captureNewBtn" type="button">
           <i class="fas fa-camera"></i> Capture New
@@ -815,7 +876,12 @@
     tokenExpiresAt: 0,
     userInfo: null,
     msalInstance: null,
-    expiryTimerId: null
+    expiryTimerId: null,
+    googleTokenClient: null,
+    googleAccessToken: "",
+    googleTokenExpiresAt: 0,
+    googleUserName: "",
+    googleSignedIn: false
   };
 
   var selectedFiles = [];
@@ -825,6 +891,10 @@
   var $id = function(id) { return document.getElementById(id); };
 
   var poeApiKeyInput = $id("poeApiKeyInput");
+  var googleCard = $id("googleCard");
+  var googleClientIdInput = $id("googleClientIdInput");
+  var googleLoginBtn = $id("googleLoginBtn");
+  var googleStatusMsg = $id("googleStatusMsg");
   var modelSelect = $id("modelSelect");
   if (modelSelect) {
     modelSelect.value = state.model;
@@ -955,12 +1025,31 @@
   }
 
   function updateExpiryBadge() {
-    if (!state.msalInstance) { tokenExpiryBadge.style.display = "none"; return; }
-    var accounts = state.msalInstance.getAllAccounts();
-    if (accounts.length === 0) { tokenExpiryBadge.style.display = "none"; return; }
-    tokenExpiryBadge.style.display = "";
-    tokenExpiryBadge.className = "token-expiry ok";
-    tokenExpiryBadge.textContent = "Session active";
+    if (state.msalInstance) {
+      var accounts = state.msalInstance.getAllAccounts();
+      if (accounts.length > 0) {
+        tokenExpiryBadge.style.display = "";
+        tokenExpiryBadge.className = "token-expiry ok";
+        tokenExpiryBadge.textContent = "Session active";
+        return;
+      }
+    }
+    if (state.googleSignedIn) {
+      var remaining = state.googleTokenExpiresAt - Date.now();
+      tokenExpiryBadge.style.display = "";
+      if (remaining > 600000) {
+        tokenExpiryBadge.className = "token-expiry ok";
+        tokenExpiryBadge.textContent = "Token valid";
+      } else if (remaining > 0) {
+        tokenExpiryBadge.className = "token-expiry warning";
+        tokenExpiryBadge.textContent = "Token expiring";
+      } else {
+        tokenExpiryBadge.className = "token-expiry expired";
+        tokenExpiryBadge.textContent = "Token expired";
+      }
+      return;
+    }
+    tokenExpiryBadge.style.display = "none";
   }
 
   function showMsalStatus(msg, isError) {
@@ -997,6 +1086,83 @@
 
   function getPoeApiKey() {
     return decryptedPoeKey || poeApiKeyInput.value.trim();
+  }
+
+  // ========== GOOGLE AUTH ==========
+  function loadSavedGoogleClientId() {
+    try {
+      if (!appStorage) { return; }
+      var saved = appStorage.getItem("namecard_googleClientId");
+      if (saved) { googleClientIdInput.value = saved; }
+    } catch(ignored) {}
+  }
+
+  function saveGoogleClientId() {
+    try {
+      if (!appStorage) { return; }
+      appStorage.setItem("namecard_googleClientId", googleClientIdInput.value.trim());
+    } catch(ignored) {}
+  }
+
+  function initGoogleAuth(clientId) {
+    if (state.googleTokenClient) { return; }
+    if (!window.google || !window.google.accounts) {
+      throw new Error("Google Identity Services not loaded. Please check your connection and reload.");
+    }
+    state.googleTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: clientId,
+      scope: "https://www.googleapis.com/auth/contacts",
+      callback: ""
+    });
+  }
+
+  function getGoogleAccessToken() {
+    return new Promise(function(resolve, reject) {
+      var remaining = state.googleTokenExpiresAt - Date.now();
+      if (state.googleSignedIn && state.googleAccessToken && remaining > 300000) {
+        return resolve(state.googleAccessToken);
+      }
+      state.googleTokenClient.callback = function(response) {
+        if (response.error) { return reject(new Error(response.error + ": " + (response.error_description || ""))); }
+        state.googleAccessToken = response.access_token;
+        state.googleTokenExpiresAt = Date.now() + 3600000;
+        state.googleSignedIn = true;
+        resolve(response.access_token);
+      };
+      state.googleTokenClient.error_callback = function(err) {
+        reject(new Error((err && err.type) ? err.type : "Google sign-in failed"));
+      };
+      state.googleTokenClient.requestAccessToken({ prompt: "" });
+    });
+  }
+
+  async function fetchGoogleUserInfo(token) {
+    try {
+      var resp = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: { Authorization: "Bearer " + token }
+      });
+      if (resp.ok) {
+        var info = await resp.json();
+        state.googleUserName = info.name || info.email || "Google User";
+        userName.textContent = state.googleUserName;
+        userAvatar.textContent = state.googleUserName.charAt(0).toUpperCase();
+      }
+    } catch(ignored) {
+      state.googleUserName = "Google User";
+      userName.textContent = "Google User";
+      userAvatar.textContent = "G";
+    }
+  }
+
+  function showGoogleStatus(msg, isError) {
+    googleStatusMsg.style.display = "";
+    googleStatusMsg.textContent = msg;
+    googleStatusMsg.style.color = isError ? "var(--danger)" : "var(--text-secondary)";
+  }
+
+  function hideGoogleStatus() {
+    googleStatusMsg.style.display = "none";
+    googleStatusMsg.textContent = "";
   }
 
   // ========== PIN ENCRYPTION ==========
@@ -1246,8 +1412,8 @@
   }
 
   continueToUploadBtn.addEventListener("click", async function() {
-    if (!state.msalInstance) {
-      showToast("Please sign in with Microsoft first.", "error");
+    if (!state.msalInstance && !state.googleSignedIn) {
+      showToast("Please sign in with Microsoft or Google first.", "error");
       return;
     }
     if (pinStateB.style.display !== "none") {
@@ -1890,6 +2056,28 @@
     instrBody.classList.toggle("show", expanded);
   });
 
+  $id("gInstrToggle").addEventListener("click", function() {
+    var toggle = $id("gInstrToggle");
+    var body = $id("gInstrBody");
+    var expanded = toggle.classList.toggle("expanded");
+    body.classList.toggle("show", expanded);
+  });
+
+  // ========== PROVIDER PICKER ==========
+  $id("pickMsBtn").addEventListener("click", function() {
+    $id("pickMsBtn").classList.add("provider-selected");
+    $id("pickGoogleBtn").classList.remove("provider-selected");
+    msalCard.style.display = "";
+    googleCard.style.display = "none";
+  });
+
+  $id("pickGoogleBtn").addEventListener("click", function() {
+    $id("pickGoogleBtn").classList.add("provider-selected");
+    $id("pickMsBtn").classList.remove("provider-selected");
+    googleCard.style.display = "";
+    msalCard.style.display = "none";
+  });
+
   // ========== MSAL LOGIN ==========
   msalLoginBtn.addEventListener("click", async function() {
     var clientId = clientIdInput.value.trim();
@@ -1936,9 +2124,53 @@
     }
   });
 
+  // ========== GOOGLE LOGIN ==========
+  googleLoginBtn.addEventListener("click", async function() {
+    var clientId = googleClientIdInput.value.trim();
+    if (!clientId) { showToast("Please enter your Google OAuth Client ID", "error"); return; }
+
+    if (pinStateB.style.display !== "none") {
+      var unlockOk = await validateAndDecryptStateB();
+      if (!unlockOk) { return; }
+    } else {
+      var setupOk = await validateAndEncryptStateA();
+      if (!setupOk) { return; }
+    }
+
+    saveGoogleClientId();
+    googleLoginBtn.disabled = true;
+    showGoogleStatus("Initializing…", false);
+
+    try {
+      initGoogleAuth(clientId);
+      showGoogleStatus("Opening sign-in popup…", false);
+      var token = await getGoogleAccessToken();
+      showGoogleStatus("Fetching account info…", false);
+      await fetchGoogleUserInfo(token);
+      hideGoogleStatus();
+      updateExpiryBadge();
+      updateStepper(2);
+      showSection("upload");
+      showToast("Signed in as " + state.googleUserName, "success");
+    } catch(err) {
+      var errMsg = err.message || String(err);
+      if (errMsg === "access_denied" || errMsg.indexOf("popup_closed") !== -1) {
+        showGoogleStatus("Sign-in cancelled", false);
+      } else {
+        showGoogleStatus("Sign-in failed: " + errMsg, true);
+        showToast("Google sign-in error: " + errMsg, "error");
+      }
+      state.googleTokenClient = null;
+      state.googleSignedIn = false;
+    } finally {
+      googleLoginBtn.disabled = false;
+    }
+  });
+
   // ========== AUTO-LOGIN ==========
   async function tryAutoLogin() {
     loadSavedSettings();
+    loadSavedGoogleClientId();
     initPinState();
     var clientId = clientIdInput.value.trim();
     if (!clientId) { return; }
@@ -1955,7 +2187,9 @@
       startTokenExpiryTracker();
       hideMsalStatus();
       var displayName = state.userInfo ? (state.userInfo.displayName || state.userInfo.mail || "User") : "User";
-      msalCard.style.display = "none";
+      // Mark Microsoft as selected in picker, keep both cards hidden, show session banner
+      $id("pickMsBtn").classList.add("provider-selected");
+      $id("pickGoogleBtn").classList.remove("provider-selected");
       sessionRestoredBanner.style.display = "";
       continueToUploadBtn.style.display = "";
       if (hasSavedEncryptedKey()) {
@@ -1981,14 +2215,26 @@
         }
       } catch(ignored) {}
     }
+    if (state.googleSignedIn && state.googleAccessToken && window.google && window.google.accounts) {
+      try { google.accounts.oauth2.revoke(state.googleAccessToken, function() {}); } catch(ignored) {}
+    }
     state.accessToken = "";
     state.tokenExpiresAt = 0;
     state.userInfo = null;
     state.tasks = [];
     state.msalInstance = null;
+    state.googleTokenClient = null;
+    state.googleAccessToken = "";
+    state.googleTokenExpiresAt = 0;
+    state.googleUserName = "";
+    state.googleSignedIn = false;
     decryptedPoeKey = "";
     stopTokenExpiryTracker();
-    msalCard.style.display = "";
+    // Reset both cards and picker
+    msalCard.style.display = "none";
+    googleCard.style.display = "none";
+    $id("pickMsBtn").classList.remove("provider-selected");
+    $id("pickGoogleBtn").classList.remove("provider-selected");
     sessionRestoredBanner.style.display = "none";
     continueToUploadBtn.style.display = "none";
     initPinState();
@@ -2004,6 +2250,7 @@
       return;
     }
     var syncBtn = $id("syncMsBtn");
+    var googleSyncBtn = $id("syncGoogleBtn");
     var progressModal = $id("syncProgressModal");
     var progressMsg = $id("syncProgressMsg");
     var elapsedEl = $id("syncElapsedCounter");
@@ -2014,6 +2261,7 @@
     elapsedEl.textContent = "0s";
     progressModal.classList.add("open");
     syncBtn.disabled = true;
+    googleSyncBtn.disabled = true;
 
     var startTime = Date.now();
     var elapsedInterval = setInterval(function() {
@@ -2024,6 +2272,7 @@
       clearInterval(elapsedInterval);
       progressModal.classList.remove("open");
       syncBtn.disabled = false;
+      googleSyncBtn.disabled = false;
     }
 
     var token;
@@ -2100,6 +2349,115 @@
 
   $id("syncMsBtn").addEventListener("click", syncToMSContacts);
 
+  // ========== SYNC TO GOOGLE CONTACTS ==========
+  async function syncToGoogleContacts() {
+    if (!state.tasks || state.tasks.length === 0) {
+      showToast("No entries to sync.", "error");
+      return;
+    }
+    if (!state.googleSignedIn && !state.googleTokenClient) {
+      showToast("Please sign in with Google first.", "error");
+      return;
+    }
+
+    var syncBtn = $id("syncGoogleBtn");
+    var msSyncBtn = $id("syncMsBtn");
+    var progressModal = $id("syncProgressModal");
+    var progressMsg = $id("syncProgressMsg");
+    var elapsedEl = $id("syncElapsedCounter");
+    var total = state.tasks.length;
+
+    progressMsg.textContent = "Preparing…";
+    elapsedEl.textContent = "0s";
+    progressModal.classList.add("open");
+    syncBtn.disabled = true;
+    msSyncBtn.disabled = true;
+
+    var startTime = Date.now();
+    var elapsedInterval = setInterval(function() {
+      elapsedEl.textContent = Math.floor((Date.now() - startTime) / 1000) + "s";
+    }, 1000);
+
+    function cleanup() {
+      clearInterval(elapsedInterval);
+      progressModal.classList.remove("open");
+      syncBtn.disabled = false;
+      msSyncBtn.disabled = false;
+    }
+
+    var token;
+    try {
+      progressMsg.textContent = "Authenticating…";
+      token = await getGoogleAccessToken();
+    } catch(err) {
+      cleanup();
+      showToast("Google auth error: " + (err.message || String(err)), "error");
+      return;
+    }
+
+    var ok = 0, fail = 0;
+    for (var i = 0; i < total; i++) {
+      var entry = state.tasks[i];
+      progressMsg.textContent = "Syncing contact " + (i + 1) + " of " + total + "…";
+
+      var phoneNumbers = [];
+      if (entry.mobile)       { phoneNumbers.push({ value: entry.mobile,       type: "mobile" }); }
+      if (entry.office_phone) { phoneNumbers.push({ value: entry.office_phone, type: "work"   }); }
+      if (entry.direct_phone) { phoneNumbers.push({ value: entry.direct_phone, type: "work"   }); }
+
+      var body = { names: [{}] };
+      if (entry.first_name) { body.names[0].givenName  = entry.first_name; }
+      if (entry.last_name)  { body.names[0].familyName = entry.last_name;  }
+      if (entry.email)      { body.emailAddresses = [{ value: entry.email }]; }
+      if (phoneNumbers.length) { body.phoneNumbers = phoneNumbers; }
+      if (entry.company || entry.department || entry.title) {
+        body.organizations = [{}];
+        if (entry.company)    { body.organizations[0].name       = entry.company;    }
+        if (entry.department) { body.organizations[0].department = entry.department; }
+        if (entry.title)      { body.organizations[0].title      = entry.title;      }
+      }
+      if (entry.note) { body.biographies = [{ value: entry.note, contentType: "TEXT_PLAIN" }]; }
+
+      try {
+        var resp = await fetch("https://people.googleapis.com/v1/people:createContact", {
+          method: "POST",
+          headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+        if (resp.ok) {
+          var created = await resp.json();
+          ok++;
+          if (state.photoDataUrls[i]) {
+            progressMsg.textContent = "Uploading photo " + (i + 1) + " of " + total + "…";
+            try {
+              var base64Photo = state.photoDataUrls[i].split(",")[1];
+              await fetch("https://people.googleapis.com/v1/" + created.resourceName + ":updateContactPhoto", {
+                method: "PATCH",
+                headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+                body: JSON.stringify({ photoBytes: base64Photo })
+              });
+            } catch(photoErr) {
+              console.warn("Google photo upload failed for entry " + i, photoErr);
+            }
+          }
+        } else {
+          var errData = await resp.json().catch(function() { return {}; });
+          console.error("Google contact sync failed for entry " + i, errData);
+          fail++;
+        }
+      } catch(e) { fail++; }
+    }
+
+    cleanup();
+    if (fail === 0) {
+      showToast(ok + " contact(s) synced to Google Contacts!", "success");
+    } else {
+      showToast(ok + " synced, " + fail + " failed. Check console for details.", "error");
+    }
+  }
+
+  $id("syncGoogleBtn").addEventListener("click", syncToGoogleContacts);
+
   // ========== BOOT ==========
   tryAutoLogin();
 
@@ -2113,6 +2471,7 @@
   </div>
 </div>
 
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
 </body>
 </html>
