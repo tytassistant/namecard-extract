@@ -297,15 +297,32 @@
     border-bottom: 1px solid var(--border);
   }
   .entry-field {
-    display: flex; gap: 10px; font-size: 13px;
-    line-height: 1.7; color: var(--text-secondary);
+    display: flex; align-items: flex-start; gap: 8px; font-size: 13px;
+    line-height: 1.7; color: var(--text-secondary); margin-bottom: 4px;
   }
+  .entry-field-copy {
+    width: 22px; height: 22px; flex-shrink: 0; margin-top: 1px;
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: none; cursor: pointer;
+    color: var(--text-tertiary); border-radius: 4px;
+    transition: var(--transition); font-size: 11px;
+  }
+  .entry-field-copy:hover { color: var(--accent); background: var(--accent-light); }
   .entry-field-key {
-    min-width: 90px; font-weight: 600; color: var(--text-tertiary);
+    min-width: 80px; font-weight: 600; color: var(--text-tertiary);
     text-transform: uppercase; letter-spacing: 0.04em; font-size: 11px;
-    padding-top: 2px;
+    padding-top: 5px; flex-shrink: 0;
   }
-  .entry-field-val { color: var(--text-primary); flex: 1; }
+  .entry-field-input {
+    flex: 1; font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 13px; color: var(--text-primary);
+    background: var(--bg-secondary); border: 1px solid transparent;
+    border-radius: 4px; padding: 3px 7px; outline: none;
+    transition: var(--transition); line-height: 1.5; width: 100%;
+  }
+  .entry-field-input:hover { border-color: var(--border-strong); }
+  .entry-field-input:focus { border-color: var(--accent); background: var(--bg-card); box-shadow: 0 0 0 2px var(--accent-light); }
+  textarea.entry-field-input { resize: vertical; min-height: 60px; }
   .entry-num {
     display: inline-flex; align-items: center; justify-content: center;
     width: 22px; height: 22px; border-radius: 50%;
@@ -1410,6 +1427,14 @@
     return d.innerHTML;
   }
 
+  var KNOWN_FIELDS = ["last_name", "first_name", "title", "company", "department", "mobile", "direct_phone", "office_phone", "email", "note"];
+  var FIELD_LABELS = {
+    last_name: "Last Name", first_name: "First Name", title: "Title",
+    company: "Company", department: "Department",
+    mobile: "Mobile", direct_phone: "Direct", office_phone: "Office",
+    email: "Email", note: "Note"
+  };
+
   function renderEntries() {
     var entryList = $id("entryList");
     entryList.innerHTML = "";
@@ -1419,52 +1444,117 @@
       return;
     }
 
-    // Field display order (known fields shown first, extras appended)
-    var KNOWN_FIELDS = ["last_name", "first_name", "title", "company", "department", "mobile", "direct_phone", "office_phone", "email", "note"];
-    var FIELD_LABELS = {
-      last_name: "Last Name", first_name: "First Name", title: "Title",
-      company: "Company", department: "Department",
-      mobile: "Mobile", direct_phone: "Direct", office_phone: "Office",
-      email: "Email", note: "Note"
-    };
-
     state.tasks.forEach(function(entry, idx) {
       var card = document.createElement("div");
       card.className = "entry-card";
       card.style.animationDelay = (idx * 0.06) + "s";
 
+      // Card title
       var nameVal = [entry.first_name, entry.last_name].filter(Boolean).join(" ") || entry.note || ("Entry " + (idx + 1));
-      var titleHtml =
-        '<div class="entry-card-title">' +
-          '<span class="entry-num">' + (idx + 1) + '</span>' +
-          escapeHtml(String(nameVal)) +
-        '</div>';
+      var cardTitle = document.createElement("div");
+      cardTitle.className = "entry-card-title";
+      cardTitle.innerHTML = '<span class="entry-num">' + (idx + 1) + '</span>' + escapeHtml(String(nameVal));
+      card.appendChild(cardTitle);
 
-      var fieldsHtml = "";
-
-      // Render known fields first (in order)
+      // Known fields (always show note even if empty)
       KNOWN_FIELDS.forEach(function(key) {
-        if (entry[key] !== undefined && entry[key] !== null && entry[key] !== "") {
-          fieldsHtml +=
-            '<div class="entry-field">' +
-              '<div class="entry-field-key">' + escapeHtml(FIELD_LABELS[key] || key) + '</div>' +
-              '<div class="entry-field-val">' + escapeHtml(String(entry[key])) + '</div>' +
-            '</div>';
+        var isNote = key === "note";
+        var val = (entry[key] !== undefined && entry[key] !== null) ? String(entry[key]) : "";
+        if (!isNote && val === "") { return; } // skip empty non-note fields
+
+        var row = document.createElement("div");
+        row.className = "entry-field";
+
+        // Copy button (left)
+        var copyBtn = document.createElement("button");
+        copyBtn.className = "entry-field-copy";
+        copyBtn.title = "Copy " + (FIELD_LABELS[key] || key);
+        copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
+        copyBtn.addEventListener("click", function() {
+          var currentVal = isNote
+            ? row.querySelector("textarea").value
+            : row.querySelector("input").value;
+          if (!currentVal) { return; }
+          navigator.clipboard.writeText(currentVal).then(function() {
+            copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+            copyBtn.style.color = "var(--success)";
+            setTimeout(function() {
+              copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
+              copyBtn.style.color = "";
+            }, 1500);
+          }).catch(function(e) { showToast("Copy failed: " + e.message, "error"); });
+        });
+
+        // Label
+        var label = document.createElement("div");
+        label.className = "entry-field-key";
+        label.textContent = FIELD_LABELS[key] || key;
+
+        // Input or textarea
+        var input;
+        if (isNote) {
+          input = document.createElement("textarea");
+          input.rows = 3;
+        } else {
+          input = document.createElement("input");
+          input.type = "text";
         }
+        input.className = "entry-field-input";
+        input.value = val;
+        input.addEventListener("input", function() {
+          entry[key] = input.value;
+          // Update card title if name fields changed
+          if (key === "first_name" || key === "last_name") {
+            var newName = [entry.first_name, entry.last_name].filter(Boolean).join(" ") || entry.note || ("Entry " + (idx + 1));
+            cardTitle.innerHTML = '<span class="entry-num">' + (idx + 1) + '</span>' + escapeHtml(newName);
+          }
+        });
+
+        row.appendChild(copyBtn);
+        row.appendChild(label);
+        row.appendChild(input);
+        card.appendChild(row);
       });
 
-      // Render any extra fields not in KNOWN_FIELDS
+      // Extra fields returned by LLM not in KNOWN_FIELDS
       Object.keys(entry).forEach(function(key) {
-        if (KNOWN_FIELDS.indexOf(key) === -1 && key !== "name" && entry[key] !== undefined && entry[key] !== null && entry[key] !== "") {
-          fieldsHtml +=
-            '<div class="entry-field">' +
-              '<div class="entry-field-key">' + escapeHtml(key) + '</div>' +
-              '<div class="entry-field-val">' + escapeHtml(String(entry[key])) + '</div>' +
-            '</div>';
-        }
+        if (KNOWN_FIELDS.indexOf(key) !== -1) { return; }
+        var val = (entry[key] !== undefined && entry[key] !== null) ? String(entry[key]) : "";
+        if (val === "") { return; }
+
+        var row = document.createElement("div");
+        row.className = "entry-field";
+
+        var copyBtn = document.createElement("button");
+        copyBtn.className = "entry-field-copy";
+        copyBtn.title = "Copy " + key;
+        copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
+        copyBtn.addEventListener("click", function() {
+          var currentVal = row.querySelector("input").value;
+          if (!currentVal) { return; }
+          navigator.clipboard.writeText(currentVal).then(function() {
+            copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+            copyBtn.style.color = "var(--success)";
+            setTimeout(function() { copyBtn.innerHTML = '<i class="fas fa-copy"></i>'; copyBtn.style.color = ""; }, 1500);
+          }).catch(function(e) { showToast("Copy failed: " + e.message, "error"); });
+        });
+
+        var label = document.createElement("div");
+        label.className = "entry-field-key";
+        label.textContent = key;
+
+        var input = document.createElement("input");
+        input.type = "text";
+        input.className = "entry-field-input";
+        input.value = val;
+        input.addEventListener("input", function() { entry[key] = input.value; });
+
+        row.appendChild(copyBtn);
+        row.appendChild(label);
+        row.appendChild(input);
+        card.appendChild(row);
       });
 
-      card.innerHTML = titleHtml + fieldsHtml;
       entryList.appendChild(card);
     });
   }
