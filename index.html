@@ -1004,7 +1004,7 @@
   }
 
   // ========== MSAL ==========
-  var MSAL_SCOPES = ["Contacts.ReadWrite", "User.Read"];
+  var MSAL_SCOPES = ["Contacts.ReadWrite", "User.Read", "MailboxSettings.Read"];
 
   function createMsalInstance(clientId) {
     var msalConfig = {
@@ -1215,9 +1215,9 @@
         { headers: { Authorization: "Bearer " + token } });
       if (resp.ok) {
         var data = await resp.json();
-        state.googleGroups = (data.contactGroups || []).map(function(g) {
-          return { resourceName: g.resourceName, name: g.name };
-        });
+        state.googleGroups = (data.contactGroups || [])
+          .filter(function(g) { return g.groupType !== "SYSTEM_CONTACT_GROUP"; })
+          .map(function(g) { return { resourceName: g.resourceName, name: g.name }; });
       }
     } catch(ignored) {}
   }
@@ -1317,14 +1317,17 @@
     trigger.addEventListener("click", function(e) {
       e.stopPropagation();
       var isOpen = panel.classList.contains("open");
-      // Close all other open panels
+      // Close all other open panels and reset their card z-index
       document.querySelectorAll(".category-panel.open").forEach(function(p) {
         p.classList.remove("open");
-        p.previousElementSibling && p.previousElementSibling.classList.remove("open");
+        if (p.previousElementSibling) { p.previousElementSibling.classList.remove("open"); }
+        var pCard = p.closest(".entry-card");
+        if (pCard) { pCard.style.zIndex = ""; }
       });
       if (!isOpen) {
         panel.classList.add("open");
         trigger.classList.add("open");
+        card.style.zIndex = "10";
       }
     });
 
@@ -1338,6 +1341,8 @@
       document.querySelectorAll(".category-panel.open").forEach(function(p) {
         p.classList.remove("open");
         if (p.previousElementSibling) { p.previousElementSibling.classList.remove("open"); }
+        var pCard = p.closest(".entry-card");
+        if (pCard) { pCard.style.zIndex = ""; }
       });
     }
   });
@@ -1347,6 +1352,8 @@
       document.querySelectorAll(".category-panel.open").forEach(function(p) {
         p.classList.remove("open");
         if (p.previousElementSibling) { p.previousElementSibling.classList.remove("open"); }
+        var pCard = p.closest(".entry-card");
+        if (pCard) { pCard.style.zIndex = ""; }
       });
     }
   });
