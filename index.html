@@ -1254,27 +1254,41 @@
 
     var extraInstruction = ($id("extraInstruction").value || "").trim();
 
-    // Build prompt — PLACEHOLDER: replace with final prompt when user provides it
+    // Build prompt
     var promptLines = [
       "You are an expert at reading business namecards.",
       "",
-      "Analyze each namecard image in this message carefully. Extract all contact information from each namecard and return the results as a JSON array — one object per namecard.",
+      "Analyze each namecard image in this message carefully. Extract the contact information from each namecard and return the results as a JSON array — one object per namecard image, in the same order as the images.",
       "",
-      "## Required output format",
-      "Return ONLY a valid JSON array. Example:",
+      "## Output fields (use exactly these keys)",
+      '- "last_name": family name / surname',
+      '- "first_name": given name including middle name if present',
+      '- "mobile": mobile / cell phone — look for labels M, C, Mobile, Cell, Mo',
+      '- "direct_phone": direct line — look for labels D, Dir, Direct',
+      '- "office_phone": main office number — look for labels O, Office, T, Tel',
+      '- "email": email address',
+      '- "company": company or organisation name',
+      '- "department": department and/or division',
+      '- "title": job title',
+      '- "note": if the name on the card is in a non-Latin script (Chinese, Japanese, Korean, etc.), put the original non-English name here; otherwise leave this field out entirely',
+      "",
+      "## Phone number formatting rules",
+      "1. Strip all spaces, hyphens (-), dots (.), parentheses ( ) from every phone number.",
+      "2. Prepend the country code (e.g. +852, +81, +1) with no space. If the country code is printed on the card, use it.",
+      "3. If no country code is on the card, infer it from the country in the address. If no address is present, leave the number as-is without a country code.",
+      "4. Example: '2123 4567' on a Hong Kong card → '+85221234567'",
+      "",
+      "## General rules",
+      "- Return one JSON object per namecard image.",
+      "- Omit any field that is not present or not readable on the card.",
+      "- Do not translate any text.",
+      "- Return ONLY a valid JSON array. No explanations, no markdown code blocks.",
+      "",
+      "## Example output",
       "[",
-      '  {"name": "John Smith", "title": "Sales Director", "company": "Acme Corp", "email": "john@acme.com", "phone": "+852 1234 5678", "address": "1 Queen\'s Road, Hong Kong"},',
-      '  {"name": "田中太郎", "title": "部長", "company": "株式会社ABC", "email": "tanaka@abc.co.jp", "phone": "03-1234-5678", "address": "東京都千代田区1-1"}',
-      "]",
-      "",
-      "## Rules",
-      "1. Extract one JSON object per namecard image.",
-      "2. Include all visible fields: name, title, company, email, phone, address, website, and any other fields present.",
-      "3. Transcribe text exactly as written — do not translate.",
-      "4. If a field is not visible or not present, omit it from the object.",
-      "5. If a namecard has both Chinese and English names or text, include both.",
-      "",
-      "Return ONLY the JSON array. No explanations, no markdown code blocks, just the raw JSON."
+      '  {"last_name":"Smith","first_name":"John","mobile":"+85298765432","office_phone":"+85221234567","email":"john@acme.com","company":"Acme Corp","title":"Sales Director"},',
+      '  {"last_name":"Tanaka","first_name":"Taro","office_phone":"+81312345678","email":"tanaka@abc.co.jp","company":"ABC株式会社","title":"部長","note":"田中太郎"}',
+      "]"
     ];
 
     if (extraInstruction) {
@@ -1406,12 +1420,12 @@
     }
 
     // Field display order (known fields shown first, extras appended)
-    var KNOWN_FIELDS = ["name", "title", "company", "email", "phone", "mobile", "fax", "address", "website", "linkedin", "wechat", "line"];
+    var KNOWN_FIELDS = ["last_name", "first_name", "title", "company", "department", "mobile", "direct_phone", "office_phone", "email", "note"];
     var FIELD_LABELS = {
-      name: "Name", title: "Title", company: "Company",
-      email: "Email", phone: "Phone", mobile: "Mobile", fax: "Fax",
-      address: "Address", website: "Website", linkedin: "LinkedIn",
-      wechat: "WeChat", line: "LINE"
+      last_name: "Last Name", first_name: "First Name", title: "Title",
+      company: "Company", department: "Department",
+      mobile: "Mobile", direct_phone: "Direct", office_phone: "Office",
+      email: "Email", note: "Note"
     };
 
     state.tasks.forEach(function(entry, idx) {
@@ -1419,7 +1433,7 @@
       card.className = "entry-card";
       card.style.animationDelay = (idx * 0.06) + "s";
 
-      var nameVal = entry.name || entry["名前"] || entry["姓名"] || ("Entry " + (idx + 1));
+      var nameVal = [entry.first_name, entry.last_name].filter(Boolean).join(" ") || entry.note || ("Entry " + (idx + 1));
       var titleHtml =
         '<div class="entry-card-title">' +
           '<span class="entry-num">' + (idx + 1) + '</span>' +
