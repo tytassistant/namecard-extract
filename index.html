@@ -1805,17 +1805,186 @@
   });
 
   // ========== EXTRACT ==========
-  extractBtn.addEventListener("click", async function() {
-    if (selectedFiles.length === 0) {
-      showToast("Please add at least one photo.", "error");
-      return;
+  // ========== CROP MODAL ==========
+  var cropStates = [];       // [{ offsetX, offsetY, scale }] per photo
+  var cropCurrentIdx = 0;
+  var croppedBlobs = [];     // final square blobs, populated on Confirm
+
+  var CROP_SIZE = 0; // resolved at open time from rendered container
+
+  function openCropModal() {
+    var container = $id("cropContainer");
+    CROP_SIZE = container.offsetWidth || 360;
+    var total = selectedFiles.length;
+    cropCurrentIdx = 0;
+    croppedBlobs = [];
+
+    // Initialise states
+    cropStates = selectedFiles.map(function() { return null; }); // null = not yet initialised
+
+    $id("cropModal").classList.add("open");
+    loadCropPhoto(0);
+  }
+
+  function loadCropPhoto(idx) {
+    var total = selectedFiles.length;
+    $id("cropCounter").textContent = "Photo " + (idx + 1) + " of " + total;
+    $id("cropBackBtn").disabled = idx === 0;
+    $id("cropNextBtn").disabled = idx === total - 1;
+
+    var img = $id("cropImg");
+    var src = selectedFiles[idx].previewUrl || URL.createObjectURL(selectedFiles[idx].file);
+    img.onload = function() {
+      if (!cropStates[idx]) {
+        // Default: scale to cover the square, centred
+        var scale = Math.max(CROP_SIZE / img.naturalWidth, CROP_SIZE / img.naturalHeight);
+        var offsetX = (CROP_SIZE - img.naturalWidth * scale) / 2;
+        var offsetY = (CROP_SIZE - img.naturalHeight * scale) / 2;
+        cropStates[idx] = { offsetX: offsetX, offsetY: offsetY, scale: scale };
+      }
+      applyCropTransform(img, cropStates[idx]);
+    };
+    img.src = src;
+  }
+
+  function applyCropTransform(img, state) {
+    img.style.transform = "translate(" + state.offsetX + "px, " + state.offsetY + "px) scale(" + state.scale + ")";
+  }
+
+  // Drag
+  (function() {
+    var container = $id("cropContainer");
+    var dragging = false;
+    var lastX = 0, lastY = 0;
+
+    container.addEventListener("mousedown", function(e) {
+      dragging = true;
+      lastX = e.clientX; lastY = e.clientY;
+      container.style.cursor = "grabbing";
+      e.preventDefault();
+    });
+    window.addEventListener("mousemove", function(e) {
+      if (!dragging) return;
+      var s = cropStates[cropCurrentIdx];
+      if (!s) return;
+      s.offsetX += e.clientX - lastX;
+      s.offsetY += e.clientY - lastY;
+      lastX = e.clientX; lastY = e.clientY;
+      applyCropTransform($id("cropImg"), s);
+    });
+    window.addEventListener("mouseup", function() {
+      dragging = false;
+      container.style.cursor = "grab";
+    });
+
+    // Touch drag + pinch
+    var lastTouches = null;
+    container.addEventListener("touchstart", function(e) {
+      lastTouches = e.touches;
+      e.preventDefault();
+    }, { passive: false });
+    container.addEventListener("touchmove", function(e) {
+      var s = cropStates[cropCurrentIdx];
+      if (!s || !lastTouches) return;
+      e.preventDefault();
+      if (e.touches.length === 1 && lastTouches.length === 1) {
+        s.offsetX += e.touches[0].clientX - lastTouches[0].clientX;
+        s.offsetY += e.touches[0].clientY - lastTouches[0].clientY;
+      } else if (e.touches.length === 2 && lastTouches.length === 2) {
+        var prevDist = Math.hypot(lastTouches[0].clientX - lastTouches[1].clientX,
+                                  lastTouches[0].clientY - lastTouches[1].clientY);
+        var newDist  = Math.hypot(e.touches[0].clientX - e.touches[1].clientX,
+                                  e.touches[0].clientY - e.touches[1].clientY);
+        if (prevDist > 0) {
+          var ratio = newDist / prevDist;
+          var cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+          var cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+          var rect = $id("cropContainer").getBoundingClientRect();
+          var px = cx - rect.left - s.offsetX;
+          var py = cy - rect.top  - s.offsetY;
+          s.scale = Math.max(0.1, s.scale * ratio);
+          s.offsetX = cx - rect.left - px * ratio;
+          s.offsetY = cy - rect.top  - py * ratio;
+        }
+      }
+      lastTouches = e.touches;
+      applyCropTransform($id("cropImg"), s);
+    }, { passive: false });
+    container.addEventListener("touchend", function(e) { lastTouches = e.touches; });
+
+    // Scroll wheel zoom
+    container.addEventListener("wheel", function(e) {
+      var s = cropStates[cropCurrentIdx];
+      if (!s) return;
+      e.preventDefault();
+      var rect = container.getBoundingClientRect();
+      var px = e.clientX - rect.left - s.offsetX;
+      var py = e.clientY - rect.top  - s.offsetY;
+      var factor = e.deltaY < 0 ? 1.1 : 0.9;
+      s.scale = Math.max(0.1, s.scale * factor);
+      s.offsetX = e.clientX - rect.left - px * factor;
+      s.offsetY = e.clientY - rect.top  - py * factor;
+      applyCropTransform($id("cropImg"), s);
+    }, { passive: false });
+  })();
+
+  $id("cropBackBtn").addEventListener("click", function() {
+    if (cropCurrentIdx > 0) { cropCurrentIdx--; loadCropPhoto(cropCurrentIdx); }
+  });
+  $id("cropNextBtn").addEventListener("click", function() {
+    if (cropCurrentIdx < selectedFiles.length - 1) { cropCurrentIdx++; loadCropPhoto(cropCurrentIdx); }
+  });
+
+  $id("cropConfirmBtn").addEventListener("click", async function() {
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = "Processing…";
+
+    croppedBlobs = [];
+    for (var i = 0; i < selectedFiles.length; i++) {
+      var s = cropStates[i];
+      var canvas = document.createElement("canvas");
+      canvas.width = CROP_SIZE;
+      canvas.height = CROP_SIZE;
+      var ctx = canvas.getContext("2d");
+      var imgEl = new Image();
+      await new Promise(function(resolve) {
+        imgEl.onload = resolve;
+        imgEl.src = selectedFiles[i].previewUrl || URL.createObjectURL(selectedFiles[i].file);
+      });
+      if (s) {
+        ctx.drawImage(imgEl, s.offsetX, s.offsetY,
+                      imgEl.naturalWidth * s.scale, imgEl.naturalHeight * s.scale);
+      } else {
+        // fallback: cover-fill centred
+        var scale = Math.max(CROP_SIZE / imgEl.naturalWidth, CROP_SIZE / imgEl.naturalHeight);
+        var ox = (CROP_SIZE - imgEl.naturalWidth * scale) / 2;
+        var oy = (CROP_SIZE - imgEl.naturalHeight * scale) / 2;
+        ctx.drawImage(imgEl, ox, oy, imgEl.naturalWidth * scale, imgEl.naturalHeight * scale);
+      }
+      await new Promise(function(resolve) {
+        canvas.toBlob(function(blob) { croppedBlobs.push(blob); resolve(); }, "image/jpeg", 0.92);
+      });
     }
+
+    btn.disabled = false;
+    btn.textContent = "Confirm all";
+    $id("cropModal").classList.remove("open");
+
     updateStepper(3);
     showSection("review");
     $id("entryList").innerHTML = "";
     $id("reviewActions").style.display = "none";
     $id("photoStrip").style.display = "none";
     await buildAndExtract();
+  });
+
+  extractBtn.addEventListener("click", function() {
+    if (selectedFiles.length === 0) {
+      showToast("Please add at least one photo.", "error");
+      return;
+    }
+    openCropModal();
   });
 
   async function buildAndExtract() {
@@ -1858,7 +2027,8 @@
     for (var i = 0; i < total; i++) {
       progressMsg.textContent = "Compressing photo " + (i + 1) + " of " + total + "…";
       try {
-        var compressed = await compressImageBlob(selectedFiles[i].file);
+        var source = (croppedBlobs && croppedBlobs[i]) ? croppedBlobs[i] : selectedFiles[i].file;
+        var compressed = await compressImageBlob(source);
         compressedFiles.push(compressed);
       } catch(err) {
         showToast("Photo " + (i + 1) + ": " + err.message, "error");
@@ -2696,6 +2866,22 @@
 
 })();
 </script>
+<div class="lightbox-overlay" id="cropModal">
+  <div style="background:var(--bg-card);border-radius:var(--radius-md);padding:24px 20px;width:min(92vw,440px);display:flex;flex-direction:column;align-items:center;gap:14px;box-shadow:var(--shadow-lg);">
+    <p style="margin:0;font-weight:700;font-size:15px;color:var(--text-primary);">Crop photos</p>
+    <p id="cropCounter" style="margin:0;font-size:13px;color:var(--text-secondary);">Photo 1 of 1</p>
+    <div id="cropContainer" style="width:min(72vw,360px);height:min(72vw,360px);position:relative;overflow:hidden;border:2px solid var(--accent);border-radius:6px;cursor:grab;touch-action:none;background:#111;flex-shrink:0;">
+      <img id="cropImg" draggable="false" style="position:absolute;transform-origin:0 0;user-select:none;-webkit-user-drag:none;pointer-events:none;">
+    </div>
+    <p style="margin:0;font-size:12px;color:var(--text-tertiary);">Drag to reposition · Scroll or pinch to zoom</p>
+    <div style="display:flex;gap:8px;width:100%;">
+      <button class="btn btn-outline" id="cropBackBtn" style="flex:1;">← Back</button>
+      <button class="btn btn-outline" id="cropNextBtn" style="flex:1;">Next →</button>
+      <button class="btn btn-primary" id="cropConfirmBtn" style="flex:1;">Confirm all</button>
+    </div>
+  </div>
+</div>
+
 <div class="lightbox-overlay" id="syncProgressModal">
   <div style="background:var(--bg-card);border-radius:var(--radius-md);padding:32px 28px;max-width:340px;width:90%;text-align:center;box-shadow:var(--shadow-lg);">
     <div class="spinner" style="margin:0 auto 16px;"></div>
