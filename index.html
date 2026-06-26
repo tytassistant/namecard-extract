@@ -206,6 +206,62 @@
   .btn-sm { padding: 8px 14px; font-size: 13px; }
   .btn-block { width: 100%; }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+  .btn-microsoft {
+    background: var(--bg-card);
+    border: 2px solid var(--border-strong);
+    color: var(--text-primary);
+    font-weight: 600;
+    padding: 14px 22px;
+  }
+  .btn-microsoft:hover { border-color: #0078d4; background: rgba(0,120,212,0.05); }
+  .btn-microsoft .ms-logo { width: 20px; height: 20px; }
+
+  .auth-status {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; border-radius: var(--radius-md);
+    background: var(--success-light); margin-bottom: 16px;
+    font-size: 14px; font-weight: 600; color: var(--success);
+  }
+  .auth-status .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--success); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700;
+  }
+  .auth-status .logout-btn {
+    margin-left: auto; font-size: 12px; cursor: pointer;
+    color: var(--text-tertiary); background: none; border: none;
+    text-decoration: underline;
+  }
+  .auth-status .token-expiry {
+    font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: 100px; white-space: nowrap;
+  }
+  .auth-status .token-expiry.ok { background: var(--success-light); color: var(--success); }
+  .auth-status .token-expiry.warning { background: rgba(212,165,60,0.15); color: #B08A2A; }
+  .auth-status .token-expiry.expired { background: var(--danger-light); color: var(--danger); }
+
+  .instructions-toggle {
+    display: flex; align-items: center; gap: 8px;
+    cursor: pointer; font-size: 13px; font-weight: 600;
+    color: var(--accent); margin-bottom: 12px;
+    background: none; border: none;
+    font-family: 'Bricolage Grotesque', sans-serif;
+  }
+  .instructions-toggle i { transition: transform 0.25s ease; }
+  .instructions-toggle.expanded i { transform: rotate(90deg); }
+  .instructions-body {
+    display: none; font-size: 13px; color: var(--text-secondary);
+    line-height: 1.8; padding: 12px 16px;
+    background: var(--bg-secondary); border-radius: var(--radius-sm);
+    margin-bottom: 16px;
+  }
+  .instructions-body.show { display: block; }
+  .instructions-body ol { padding-left: 18px; }
+  .instructions-body code {
+    background: var(--accent-light); color: var(--accent);
+    padding: 1px 6px; border-radius: 4px; font-size: 12px;
+  }
 
   /* Upload buttons */
   .upload-actions-row {
@@ -499,6 +555,54 @@
 
   <!-- ======= SECTION 1: AUTH ======= -->
   <div class="section visible" id="section-auth">
+
+    <div class="card" id="msalCard">
+      <div class="card-title">Connect to Microsoft</div>
+      <div class="card-desc">Sign in with your Microsoft account to sync extracted namecards to Microsoft Contacts. Your session stays active for up to 90&nbsp;days.</div>
+
+      <button class="instructions-toggle" id="instrToggle" type="button">
+        <i class="fas fa-chevron-right"></i> First-time setup (Azure AD app)
+      </button>
+      <div class="instructions-body" id="instrBody">
+        <ol>
+          <li>Go to <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" rel="noopener">Azure AD &gt; App registrations</a></li>
+          <li>Click <strong>New registration</strong>, name it (e.g. &ldquo;Namecard Extract&rdquo;)</li>
+          <li>Under <strong>Supported account types</strong>, choose <em>Accounts in any org &amp; personal</em></li>
+          <li>Under <strong>Redirect URI</strong>, select <strong>Single-page application (SPA)</strong> and enter this page&rsquo;s URL</li>
+          <li>Click <strong>Register</strong>, then copy the <strong>Application (client) ID</strong></li>
+          <li>Go to <strong>API permissions</strong> &gt; Add &gt; Microsoft Graph &gt; Delegated &gt; add <code>Contacts.ReadWrite</code> and <code>User.Read</code></li>
+        </ol>
+        <div style="margin-top:10px; padding:10px 12px; border-radius:8px; background:var(--accent-light); font-size:12px; line-height:1.6;">
+          <strong><i class="fas fa-circle-info"></i> Long-lived sessions</strong><br>
+          MSAL.js caches refresh tokens in localStorage. Once signed in, your session stays active for up to <strong>90 days</strong> without re-login.
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:16px;">
+        <label>Azure App Client ID <span style="font-weight:400; text-transform:none; letter-spacing:0;">(not a login)</span></label>
+        <input type="text" id="clientIdInput" name="azure_client_id" placeholder="e.g. 12345678-abcd-1234-abcd-1234567890ab" autocomplete="one-time-code" data-form-type="other" data-lpignore="true">
+        <div class="hint">Found in Azure AD &gt; App registrations &gt; Overview</div>
+      </div>
+
+      <button class="btn btn-microsoft btn-block" id="msalLoginBtn" type="button">
+        <svg class="ms-logo" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+        Sign in with Microsoft
+      </button>
+
+      <div id="msalStatusMsg" style="text-align:center; margin-top:8px; font-size:13px; color:var(--text-secondary); display:none;"></div>
+    </div>
+
+    <!-- Session restored banner -->
+    <div id="sessionRestoredBanner" class="card" style="display:none; border-left:4px solid var(--success); background:var(--success-light);">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <i class="fas fa-circle-check" style="color:var(--success); font-size:20px;"></i>
+        <div>
+          <div style="font-weight:600; color:var(--text-primary); font-size:15px;">Microsoft session active</div>
+          <div id="sessionRestoredUser" style="font-size:13px; color:var(--text-secondary); margin-top:2px;">Signed in — enter your Poe PIN below to continue.</div>
+        </div>
+      </div>
+    </div>
+
     <div class="card" id="poeKeyCard">
       <div class="card-title"><i class="fas fa-key" style="margin-right:6px;"></i> Poe API Key</div>
 
@@ -549,7 +653,7 @@
         </div>
       </div>
 
-      <button class="btn btn-block" id="continueToUploadBtn" type="button" style="margin-top:12px; background:var(--accent); color:#fff;">
+      <button class="btn btn-block" id="continueToUploadBtn" type="button" style="display:none; margin-top:12px; background:var(--accent); color:#fff;">
         <i class="fas fa-arrow-right" style="margin-right:6px;"></i> Continue to capture
       </button>
     </div>
@@ -557,9 +661,11 @@
 
   <!-- ======= SECTION 2: CAPTURE ======= -->
   <div class="section" id="section-upload">
-    <div id="authStatusBar" style="display:flex; align-items:center; gap:10px; padding:12px 16px; border-radius:12px; background:var(--success-light); margin-bottom:16px; font-size:14px; font-weight:600; color:var(--success);">
-      <div id="userAvatar" style="width:32px; height:32px; border-radius:50%; background:var(--success); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700;">P</div>
-      <span id="userName">Poe connected</span>
+    <div class="auth-status" id="authStatusBar">
+      <div class="avatar" id="userAvatar">?</div>
+      <span id="userName">Signed in</span>
+      <span class="token-expiry ok" id="tokenExpiryBadge" style="display:none;"></span>
+      <button class="logout-btn" id="logoutBtn" type="button">Sign out</button>
     </div>
 
     <div class="card">
@@ -640,8 +746,9 @@
         <button class="btn btn-outline" id="backToCaptureBtn" type="button">
           <i class="fas fa-arrow-left"></i> Back
         </button>
-        <button class="btn btn-primary" id="copyResultsBtn" type="button" style="flex:1;">
-          <i class="fas fa-copy"></i> Copy Results
+        <button class="btn btn-microsoft" id="syncMsBtn" type="button" style="flex:1;">
+          <svg class="ms-logo" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+          Sync to Contacts
         </button>
         <button class="btn btn-accent" id="captureNewBtn" type="button">
           <i class="fas fa-camera"></i> Capture New
@@ -702,7 +809,12 @@
   var state = {
     currentStep: 1,
     model: "gpt-5.4-mini",
-    tasks: []
+    tasks: [],
+    accessToken: "",
+    tokenExpiresAt: 0,
+    userInfo: null,
+    msalInstance: null,
+    expiryTimerId: null
   };
 
   var selectedFiles = [];
@@ -718,6 +830,18 @@
     modelSelect.addEventListener("change", function() { state.model = modelSelect.value; });
   }
   var continueToUploadBtn = $id("continueToUploadBtn");
+  var msalCard = $id("msalCard");
+  var instrToggle = $id("instrToggle");
+  var instrBody = $id("instrBody");
+  var clientIdInput = $id("clientIdInput");
+  var msalLoginBtn = $id("msalLoginBtn");
+  var msalStatusMsg = $id("msalStatusMsg");
+  var sessionRestoredBanner = $id("sessionRestoredBanner");
+  var sessionRestoredUser = $id("sessionRestoredUser");
+  var userName = $id("userName");
+  var userAvatar = $id("userAvatar");
+  var tokenExpiryBadge = $id("tokenExpiryBadge");
+  var logoutBtn = $id("logoutBtn");
   var extractBtn = $id("extractBtn");
   var photoInput = $id("photoInput");
   var cameraInput = $id("cameraInput");
@@ -763,6 +887,112 @@
   // ========== LOCALSTORAGE ==========
   var appStorage = window["localStorage"];
   var decryptedPoeKey = "";
+
+  function loadSavedSettings() {
+    try {
+      if (!appStorage) { return; }
+      var savedClientId = appStorage.getItem("namecard_clientId");
+      if (savedClientId) { clientIdInput.value = savedClientId; }
+    } catch(ignored) {}
+  }
+
+  function saveSettings() {
+    try {
+      if (!appStorage) { return; }
+      appStorage.setItem("namecard_clientId", clientIdInput.value.trim());
+    } catch(ignored) {}
+  }
+
+  // ========== MSAL ==========
+  var MSAL_SCOPES = ["Contacts.ReadWrite", "User.Read"];
+
+  function createMsalInstance(clientId) {
+    var msalConfig = {
+      auth: {
+        clientId: clientId,
+        authority: "https://login.microsoftonline.com/common",
+        redirectUri: window.location.origin + window.location.pathname
+      },
+      cache: { cacheLocation: "localStorage", storeAuthStateInCookie: false }
+    };
+    return new msal.PublicClientApplication(msalConfig);
+  }
+
+  async function getAccessToken() {
+    if (!state.msalInstance) { throw new Error("Not authenticated. Please sign in first."); }
+    var accounts = state.msalInstance.getAllAccounts();
+    if (accounts.length === 0) { throw new Error("No active session. Please sign in again."); }
+    var request = { scopes: MSAL_SCOPES, account: accounts[0] };
+    try {
+      var response = await state.msalInstance.acquireTokenSilent(request);
+      state.accessToken = response.accessToken;
+      state.tokenExpiresAt = response.expiresOn ? response.expiresOn.getTime() : (Date.now() + 3600000);
+      updateExpiryBadge();
+      return response.accessToken;
+    } catch(silentErr) {
+      try {
+        var popupResponse = await state.msalInstance.acquireTokenPopup(request);
+        state.accessToken = popupResponse.accessToken;
+        state.tokenExpiresAt = popupResponse.expiresOn ? popupResponse.expiresOn.getTime() : (Date.now() + 3600000);
+        updateExpiryBadge();
+        return popupResponse.accessToken;
+      } catch(popupErr) {
+        throw new Error("Could not acquire token: " + (popupErr.message || String(popupErr)));
+      }
+    }
+  }
+
+  function startTokenExpiryTracker() {
+    stopTokenExpiryTracker();
+    updateExpiryBadge();
+    state.expiryTimerId = setInterval(updateExpiryBadge, 30000);
+  }
+
+  function stopTokenExpiryTracker() {
+    if (state.expiryTimerId) { clearInterval(state.expiryTimerId); state.expiryTimerId = null; }
+    tokenExpiryBadge.style.display = "none";
+  }
+
+  function updateExpiryBadge() {
+    if (!state.msalInstance) { tokenExpiryBadge.style.display = "none"; return; }
+    var accounts = state.msalInstance.getAllAccounts();
+    if (accounts.length === 0) { tokenExpiryBadge.style.display = "none"; return; }
+    tokenExpiryBadge.style.display = "";
+    tokenExpiryBadge.className = "token-expiry ok";
+    tokenExpiryBadge.textContent = "Session active";
+  }
+
+  function showMsalStatus(msg, isError) {
+    msalStatusMsg.style.display = "";
+    msalStatusMsg.textContent = msg;
+    msalStatusMsg.style.color = isError ? "var(--danger)" : "var(--text-secondary)";
+  }
+
+  function hideMsalStatus() {
+    msalStatusMsg.style.display = "none";
+    msalStatusMsg.textContent = "";
+  }
+
+  async function fetchUserInfo() {
+    try {
+      var token = state.accessToken;
+      if (state.msalInstance) {
+        try { token = await getAccessToken(); } catch(ignored) {}
+      }
+      var resp = await fetch("https://graph.microsoft.com/v1.0/me", {
+        headers: { Authorization: "Bearer " + token }
+      });
+      if (resp.ok) {
+        state.userInfo = await resp.json();
+        var displayName = state.userInfo.displayName || state.userInfo.mail || "User";
+        userName.textContent = displayName;
+        userAvatar.textContent = displayName.charAt(0).toUpperCase();
+      }
+    } catch(ignored) {
+      userName.textContent = "Signed in";
+      userAvatar.textContent = "✓";
+    }
+  }
 
   function getPoeApiKey() {
     return decryptedPoeKey || poeApiKeyInput.value.trim();
@@ -1015,6 +1245,10 @@
   }
 
   continueToUploadBtn.addEventListener("click", async function() {
+    if (!state.msalInstance) {
+      showToast("Please sign in with Microsoft first.", "error");
+      return;
+    }
     if (pinStateB.style.display !== "none") {
       var unlockOk = await validateAndDecryptStateB();
       if (!unlockOk) { return; }
@@ -1606,13 +1840,6 @@
     showSection("upload");
   });
 
-  $id("copyResultsBtn").addEventListener("click", function() {
-    if (!state.tasks || state.tasks.length === 0) { return; }
-    navigator.clipboard.writeText(JSON.stringify(state.tasks, null, 2)).then(function() {
-      showToast("Results copied to clipboard!", "success");
-    }).catch(function(e) { showToast("Copy failed: " + e.message, "error"); });
-  });
-
   $id("captureNewBtn").addEventListener("click", function() {
     // Revoke all object URLs
     selectedFiles.forEach(function(item) {
@@ -1630,10 +1857,180 @@
     showSection("upload");
   });
 
+  // ========== INSTRUCTIONS TOGGLE ==========
+  instrToggle.addEventListener("click", function() {
+    var expanded = instrToggle.classList.toggle("expanded");
+    instrBody.classList.toggle("show", expanded);
+  });
+
+  // ========== MSAL LOGIN ==========
+  msalLoginBtn.addEventListener("click", async function() {
+    var clientId = clientIdInput.value.trim();
+    if (!clientId) { showToast("Please enter your Azure App Client ID", "error"); return; }
+
+    if (pinStateB.style.display !== "none") {
+      var unlockOk = await validateAndDecryptStateB();
+      if (!unlockOk) { return; }
+    } else {
+      var setupOk = await validateAndEncryptStateA();
+      if (!setupOk) { return; }
+    }
+
+    saveSettings();
+    msalLoginBtn.disabled = true;
+    showMsalStatus("Initializing…", false);
+
+    try {
+      state.msalInstance = createMsalInstance(clientId);
+      await state.msalInstance.initialize();
+      showMsalStatus("Opening sign-in popup…", false);
+      var loginResponse = await state.msalInstance.loginPopup({ scopes: MSAL_SCOPES });
+      state.accessToken = loginResponse.accessToken;
+      state.tokenExpiresAt = loginResponse.expiresOn ? loginResponse.expiresOn.getTime() : (Date.now() + 3600000);
+      showMsalStatus("Fetching account info…", false);
+      await fetchUserInfo();
+      startTokenExpiryTracker();
+      hideMsalStatus();
+      updateStepper(2);
+      showSection("upload");
+      var displayName = state.userInfo ? (state.userInfo.displayName || state.userInfo.mail || "User") : "User";
+      showToast("Signed in as " + displayName, "success");
+    } catch(err) {
+      var errMsg = err.message || String(err);
+      if (errMsg.indexOf("user_cancelled") !== -1 || errMsg.indexOf("User cancelled") !== -1) {
+        showMsalStatus("Sign-in cancelled", false);
+      } else {
+        showMsalStatus("Sign-in failed: " + errMsg, true);
+        showToast("Sign-in error: " + errMsg, "error");
+      }
+      state.msalInstance = null;
+    } finally {
+      msalLoginBtn.disabled = false;
+    }
+  });
+
+  // ========== AUTO-LOGIN ==========
+  async function tryAutoLogin() {
+    loadSavedSettings();
+    initPinState();
+    var clientId = clientIdInput.value.trim();
+    if (!clientId) { return; }
+    try {
+      state.msalInstance = createMsalInstance(clientId);
+      await state.msalInstance.initialize();
+      var accounts = state.msalInstance.getAllAccounts();
+      if (accounts.length === 0) { state.msalInstance = null; return; }
+      showMsalStatus("Restoring session…", false);
+      var response = await state.msalInstance.acquireTokenSilent({ scopes: MSAL_SCOPES, account: accounts[0] });
+      state.accessToken = response.accessToken;
+      state.tokenExpiresAt = response.expiresOn ? response.expiresOn.getTime() : (Date.now() + 3600000);
+      await fetchUserInfo();
+      startTokenExpiryTracker();
+      hideMsalStatus();
+      var displayName = state.userInfo ? (state.userInfo.displayName || state.userInfo.mail || "User") : "User";
+      msalCard.style.display = "none";
+      sessionRestoredBanner.style.display = "";
+      continueToUploadBtn.style.display = "";
+      if (hasSavedEncryptedKey()) {
+        sessionRestoredUser.textContent = "Signed in as " + displayName + " — enter your PIN to continue.";
+        showToast("Welcome back, " + displayName + ". Enter your PIN to unlock.", "success");
+      } else {
+        sessionRestoredUser.textContent = "Signed in as " + displayName + " — enter your Poe API key below to continue.";
+        showToast("Welcome back, " + displayName + ". Please enter your Poe API key.", "success");
+      }
+    } catch(err) {
+      hideMsalStatus();
+      state.msalInstance = null;
+    }
+  }
+
+  // ========== LOGOUT ==========
+  logoutBtn.addEventListener("click", async function() {
+    if (state.msalInstance) {
+      try {
+        var accounts = state.msalInstance.getAllAccounts();
+        if (accounts.length > 0) {
+          await state.msalInstance.logoutPopup({ account: accounts[0] });
+        }
+      } catch(ignored) {}
+    }
+    state.accessToken = "";
+    state.tokenExpiresAt = 0;
+    state.userInfo = null;
+    state.tasks = [];
+    state.msalInstance = null;
+    decryptedPoeKey = "";
+    stopTokenExpiryTracker();
+    msalCard.style.display = "";
+    sessionRestoredBanner.style.display = "none";
+    continueToUploadBtn.style.display = "none";
+    initPinState();
+    updateStepper(1);
+    showSection("auth");
+    showToast("Signed out", "info");
+  });
+
+  // ========== SYNC TO MS CONTACTS ==========
+  async function syncToMSContacts() {
+    if (!state.tasks || state.tasks.length === 0) {
+      showToast("No entries to sync.", "error");
+      return;
+    }
+    var syncBtn = $id("syncMsBtn");
+    syncBtn.disabled = true;
+    showToast("Syncing " + state.tasks.length + " contact(s)…", "info");
+    var token;
+    try {
+      token = await getAccessToken();
+    } catch(err) {
+      showToast("Auth error: " + (err.message || String(err)), "error");
+      syncBtn.disabled = false;
+      return;
+    }
+    var ok = 0, fail = 0;
+    for (var i = 0; i < state.tasks.length; i++) {
+      var entry = state.tasks[i];
+      var body = {};
+      if (entry.last_name)   { body.surname = entry.last_name; }
+      if (entry.first_name)  { body.givenName = entry.first_name; }
+      if (entry.email)       { body.emailAddresses = [{ address: entry.email, name: ((entry.first_name || "") + " " + (entry.last_name || "")).trim() }]; }
+      if (entry.mobile)      { body.mobilePhone = entry.mobile; }
+      var bizPhones = [];
+      if (entry.office_phone)  { bizPhones.push(entry.office_phone); }
+      if (entry.direct_phone)  { bizPhones.push(entry.direct_phone); }
+      if (bizPhones.length)    { body.businessPhones = bizPhones; }
+      if (entry.company)     { body.companyName = entry.company; }
+      if (entry.department)  { body.department = entry.department; }
+      if (entry.title)       { body.jobTitle = entry.title; }
+      if (entry.note)        { body.personalNotes = entry.note; }
+      try {
+        var resp = await fetch("https://graph.microsoft.com/v1.0/me/contacts", {
+          method: "POST",
+          headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+        if (resp.ok) { ok++; } else {
+          var errData = await resp.json().catch(function() { return {}; });
+          console.error("Contact sync failed for entry " + i, errData);
+          fail++;
+        }
+      } catch(e) { fail++; }
+    }
+    syncBtn.disabled = false;
+    if (fail === 0) {
+      showToast(ok + " contact(s) synced to Microsoft Contacts!", "success");
+    } else {
+      showToast(ok + " synced, " + fail + " failed. Check console for details.", "error");
+    }
+  }
+
+  $id("syncMsBtn").addEventListener("click", syncToMSContacts);
+
   // ========== BOOT ==========
-  initPinState();
+  tryAutoLogin();
 
 })();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
 </body>
 </html>
