@@ -404,6 +404,33 @@
     font-size: 11px; font-weight: 700; margin-right: 8px; flex-shrink: 0;
   }
 
+  /* Per-card category selector */
+  .category-select { position: relative; margin-top: 12px; }
+  .category-trigger {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px; background: var(--bg-secondary); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); cursor: pointer; font-size: 13px;
+    color: var(--text-primary); font-family: 'Bricolage Grotesque', sans-serif;
+    transition: var(--transition); text-align: left;
+  }
+  .category-trigger:hover { border-color: var(--accent); }
+  .category-trigger.open { border-color: var(--accent); }
+  .category-panel {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--bg-card); border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm); box-shadow: var(--shadow-md);
+    max-height: 200px; overflow-y: auto; z-index: 50;
+  }
+  .category-panel.open { display: block; }
+  .category-option {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; cursor: pointer; font-size: 13px; color: var(--text-primary);
+  }
+  .category-option:hover { background: var(--bg-card-hover); }
+  .category-option label { cursor: pointer; flex: 1; }
+  .category-option input[type="checkbox"] { cursor: pointer; width: 14px; height: 14px; flex-shrink: 0; }
+  .category-empty { padding: 10px 12px; font-size: 13px; color: var(--text-tertiary); }
+
   /* Photo thumbnail strip */
   .photo-strip {
     display: flex; gap: 8px; overflow-x: auto;
@@ -881,7 +908,9 @@
     googleAccessToken: "",
     googleTokenExpiresAt: 0,
     googleUserName: "",
-    googleSignedIn: false
+    googleSignedIn: false,
+    msCategories: [],
+    googleGroups: []
   };
 
   var selectedFiles = [];
@@ -1165,6 +1194,163 @@
     googleStatusMsg.textContent = "";
   }
 
+  // ========== CATEGORY / LABEL FETCH ==========
+  async function fetchMSCategories(token) {
+    try {
+      var resp = await fetch("https://graph.microsoft.com/v1.0/me/outlook/masterCategories",
+        { headers: { Authorization: "Bearer " + token } });
+      if (resp.ok) {
+        var data = await resp.json();
+        state.msCategories = (data.value || []).map(function(c) {
+          return { id: c.id, displayName: c.displayName };
+        });
+      }
+    } catch(ignored) {}
+  }
+
+  async function fetchGoogleGroups(token) {
+    try {
+      var resp = await fetch(
+        "https://people.googleapis.com/v1/contactGroups?pageSize=1000",
+        { headers: { Authorization: "Bearer " + token } });
+      if (resp.ok) {
+        var data = await resp.json();
+        state.googleGroups = (data.contactGroups || []).map(function(g) {
+          return { resourceName: g.resourceName, name: g.name };
+        });
+      }
+    } catch(ignored) {}
+  }
+
+  function getDefaultGoogleSelection() {
+    var match = state.googleGroups.find(function(g) { return g.name === "Other Business Contacts"; });
+    return match ? [match.resourceName] : [];
+  }
+
+  function updateCategoryTrigger(triggerTextEl, entry) {
+    var sel = entry._selectedCategories || [];
+    if (sel.length === 0) {
+      triggerTextEl.textContent = "None selected";
+      return;
+    }
+    if (sel.length === 1) {
+      var items = state.googleSignedIn ? state.googleGroups : state.msCategories;
+      var found = items.find(function(it) {
+        return state.googleSignedIn ? it.resourceName === sel[0] : it.displayName === sel[0];
+      });
+      triggerTextEl.textContent = found ? (state.googleSignedIn ? found.name : found.displayName) : sel[0];
+      return;
+    }
+    triggerTextEl.textContent = sel.length + " selected";
+  }
+
+  function buildCardCategorySelector(card, entry) {
+    var items = state.googleSignedIn ? state.googleGroups : state.msCategories;
+
+    // Initialise default selection once per entry
+    if (!entry._selectedCategories) {
+      entry._selectedCategories = state.googleSignedIn ? getDefaultGoogleSelection() : [];
+    }
+
+    var label = document.createElement("div");
+    label.style.cssText = "font-size:11px; font-weight:600; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.04em; margin-top:14px; margin-bottom:6px;";
+    label.textContent = state.googleSignedIn ? "Label" : "Category";
+    card.appendChild(label);
+
+    var wrap = document.createElement("div");
+    wrap.className = "category-select";
+
+    var trigger = document.createElement("button");
+    trigger.className = "category-trigger";
+    trigger.type = "button";
+
+    var triggerText = document.createElement("span");
+    var chevron = document.createElement("i");
+    chevron.className = "fas fa-chevron-down";
+    chevron.style.cssText = "font-size:11px; color:var(--text-tertiary);";
+    trigger.appendChild(triggerText);
+    trigger.appendChild(chevron);
+
+    var panel = document.createElement("div");
+    panel.className = "category-panel";
+
+    if (items.length === 0) {
+      var empty = document.createElement("div");
+      empty.className = "category-empty";
+      empty.textContent = "No " + (state.googleSignedIn ? "labels" : "categories") + " found";
+      panel.appendChild(empty);
+    } else {
+      items.forEach(function(item) {
+        var value = state.googleSignedIn ? item.resourceName : item.displayName;
+        var displayName = state.googleSignedIn ? item.name : item.displayName;
+
+        var opt = document.createElement("label");
+        opt.className = "category-option";
+
+        var cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.value = value;
+        cb.checked = entry._selectedCategories.indexOf(value) !== -1;
+
+        var optLabel = document.createElement("span");
+        optLabel.textContent = displayName;
+
+        cb.addEventListener("change", function() {
+          if (cb.checked) {
+            if (entry._selectedCategories.indexOf(value) === -1) {
+              entry._selectedCategories.push(value);
+            }
+          } else {
+            entry._selectedCategories = entry._selectedCategories.filter(function(v) { return v !== value; });
+          }
+          updateCategoryTrigger(triggerText, entry);
+        });
+
+        opt.appendChild(cb);
+        opt.appendChild(optLabel);
+        panel.appendChild(opt);
+      });
+    }
+
+    updateCategoryTrigger(triggerText, entry);
+
+    trigger.addEventListener("click", function(e) {
+      e.stopPropagation();
+      var isOpen = panel.classList.contains("open");
+      // Close all other open panels
+      document.querySelectorAll(".category-panel.open").forEach(function(p) {
+        p.classList.remove("open");
+        p.previousElementSibling && p.previousElementSibling.classList.remove("open");
+      });
+      if (!isOpen) {
+        panel.classList.add("open");
+        trigger.classList.add("open");
+      }
+    });
+
+    wrap.appendChild(trigger);
+    wrap.appendChild(panel);
+    card.appendChild(wrap);
+  }
+
+  document.addEventListener("click", function(e) {
+    if (!e.target.closest(".category-select")) {
+      document.querySelectorAll(".category-panel.open").forEach(function(p) {
+        p.classList.remove("open");
+        if (p.previousElementSibling) { p.previousElementSibling.classList.remove("open"); }
+      });
+    }
+  });
+
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") {
+      document.querySelectorAll(".category-panel.open").forEach(function(p) {
+        p.classList.remove("open");
+        if (p.previousElementSibling) { p.previousElementSibling.classList.remove("open"); }
+      });
+    }
+  });
+
   // ========== PIN ENCRYPTION ==========
   var STORAGE_KEY_ENCRYPTED = "namecard_enckey";
 
@@ -1422,6 +1608,9 @@
     } else {
       var setupOk = await validateAndEncryptStateA();
       if (!setupOk) { return; }
+    }
+    if (state.msalInstance) {
+      getAccessToken().then(function(t) { fetchMSCategories(t); }).catch(function() {});
     }
     updateStepper(2);
     showSection("upload");
@@ -2022,6 +2211,7 @@
         card.appendChild(row);
       });
 
+      buildCardCategorySelector(card, entry);
       entryList.appendChild(card);
     });
   }
@@ -2120,6 +2310,7 @@
       startTokenExpiryTracker();
       hideMsalStatus();
       updateSyncButtons();
+      fetchMSCategories(state.accessToken);
       updateStepper(2);
       showSection("upload");
       var displayName = state.userInfo ? (state.userInfo.displayName || state.userInfo.mail || "User") : "User";
@@ -2164,6 +2355,7 @@
       hideGoogleStatus();
       updateExpiryBadge();
       updateSyncButtons();
+      fetchGoogleGroups(token);
       updateStepper(2);
       showSection("upload");
       showToast("Signed in as " + state.googleUserName, "success");
@@ -2202,6 +2394,7 @@
       startTokenExpiryTracker();
       hideMsalStatus();
       updateSyncButtons();
+      fetchMSCategories(state.accessToken);
       var displayName = state.userInfo ? (state.userInfo.displayName || state.userInfo.mail || "User") : "User";
       // Mark Microsoft as selected in picker, keep both cards hidden, show session banner
       $id("pickMsBtn").classList.add("provider-selected");
@@ -2326,6 +2519,8 @@
       if (entry.department)  { body.department = entry.department; }
       if (entry.title)       { body.jobTitle = entry.title; }
       if (entry.note)        { body.personalNotes = entry.note; }
+      var selCatsMs = entry._selectedCategories;
+      if (selCatsMs && selCatsMs.length > 0) { body.categories = selCatsMs.slice(); }
       try {
         var resp = await fetch("https://graph.microsoft.com/v1.0/me/contacts", {
           method: "POST",
@@ -2433,6 +2628,12 @@
         if (entry.title)      { body.organizations[0].title      = entry.title;      }
       }
       if (entry.note) { body.biographies = [{ value: entry.note, contentType: "TEXT_PLAIN" }]; }
+      var selCatsG = entry._selectedCategories;
+      if (selCatsG && selCatsG.length > 0) {
+        body.memberships = selCatsG.map(function(rn) {
+          return { contactGroupMembership: { contactGroupResourceName: rn } };
+        });
+      }
 
       try {
         var resp = await fetch("https://people.googleapis.com/v1/people:createContact", {
