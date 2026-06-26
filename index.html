@@ -1532,7 +1532,7 @@
       '- "company": company or organisation name',
       '- "department": department and/or division',
       '- "title": job title',
-      '- "note": if the name on the card is in a non-Latin script (Chinese, Japanese, Korean, etc.), put the original non-English name here; otherwise leave this field out entirely',
+      '- "note": if the person\'s name or company name on the card appears in a non-Latin script (Chinese, Japanese, Korean, etc.), put the original non-English value(s) here, separated by " / " if both are present (e.g. "田中太郎 / ABC株式会社"); otherwise leave this field out entirely',
       "",
       "## Phone number formatting rules",
       "1. Strip all spaces, hyphens (-), dots (.), parentheses ( ) from every phone number.",
@@ -1550,7 +1550,7 @@
       "## Example (4 images, 3rd is not a namecard)",
       "[",
       '  {"last_name":"Smith","first_name":"John","mobile":"+85298765432","office_phone":"+85221234567","email":"john@acme.com","company":"Acme Corp","title":"Sales Director"},',
-      '  {"last_name":"Tanaka","first_name":"Taro","office_phone":"+81312345678","email":"tanaka@abc.co.jp","company":"ABC株式会社","title":"部長","note":"田中太郎"},',
+      '  {"last_name":"Tanaka","first_name":"Taro","office_phone":"+81312345678","email":"tanaka@abc.co.jp","company":"ABC株式会社","title":"部長","note":"田中太郎 / ABC株式会社"},',
       "  null,",
       '  {"last_name":"Lee","first_name":"David","mobile":"+85291234567","email":"david@xyz.com","company":"XYZ Ltd","title":"Manager"}',
       "]"
