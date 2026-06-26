@@ -810,6 +810,7 @@
     currentStep: 1,
     model: "gpt-5.4-mini",
     tasks: [],
+    photoDataUrls: [],
     accessToken: "",
     tokenExpiresAt: 0,
     userInfo: null,
@@ -1646,6 +1647,7 @@
       if (entry.first_name) { entry.first_name = toNameCase(entry.first_name); }
     });
     state.tasks = parsed;
+    state.photoDataUrls = dataUrls || [];
 
     // Photo strip
     if (dataUrls && dataUrls.length > 0) {
@@ -1847,6 +1849,7 @@
     });
     selectedFiles = [];
     state.tasks = [];
+    state.photoDataUrls = [];
     renderPhotoGrid();
     updatePhotoCounter();
     $id("extraInstruction").value = "";
@@ -1987,6 +1990,16 @@
       syncBtn.disabled = false;
       return;
     }
+    var photosMatchEntries = state.photoDataUrls.length === state.tasks.length;
+
+    function dataUrlToBuffer(dataUrl) {
+      var base64 = dataUrl.split(",")[1];
+      var binary = atob(base64);
+      var bytes = new Uint8Array(binary.length);
+      for (var k = 0; k < binary.length; k++) { bytes[k] = binary.charCodeAt(k); }
+      return bytes.buffer;
+    }
+
     var ok = 0, fail = 0;
     for (var i = 0; i < state.tasks.length; i++) {
       var entry = state.tasks[i];
@@ -2009,7 +2022,22 @@
           headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
           body: JSON.stringify(body)
         });
-        if (resp.ok) { ok++; } else {
+        if (resp.ok) {
+          var created = await resp.json();
+          ok++;
+          // Upload photo if we have a 1:1 match between photos and entries
+          if (photosMatchEntries && state.photoDataUrls[i]) {
+            try {
+              await fetch("https://graph.microsoft.com/v1.0/me/contacts/" + created.id + "/photo/$value", {
+                method: "PUT",
+                headers: { Authorization: "Bearer " + token, "Content-Type": "image/jpeg" },
+                body: dataUrlToBuffer(state.photoDataUrls[i])
+              });
+            } catch(photoErr) {
+              console.warn("Photo upload failed for entry " + i, photoErr);
+            }
+          }
+        } else {
           var errData = await resp.json().catch(function() { return {}; });
           console.error("Contact sync failed for entry " + i, errData);
           fail++;
