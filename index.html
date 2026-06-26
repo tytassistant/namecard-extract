@@ -2004,16 +2004,38 @@
       return;
     }
     var syncBtn = $id("syncMsBtn");
+    var progressModal = $id("syncProgressModal");
+    var progressMsg = $id("syncProgressMsg");
+    var elapsedEl = $id("syncElapsedCounter");
+    var total = state.tasks.length;
+
+    // Show overlay and start elapsed counter
+    progressMsg.textContent = "Preparing…";
+    elapsedEl.textContent = "0s";
+    progressModal.classList.add("open");
     syncBtn.disabled = true;
-    showToast("Syncing " + state.tasks.length + " contact(s)…", "info");
+
+    var startTime = Date.now();
+    var elapsedInterval = setInterval(function() {
+      elapsedEl.textContent = Math.floor((Date.now() - startTime) / 1000) + "s";
+    }, 1000);
+
+    function cleanup() {
+      clearInterval(elapsedInterval);
+      progressModal.classList.remove("open");
+      syncBtn.disabled = false;
+    }
+
     var token;
     try {
+      progressMsg.textContent = "Authenticating…";
       token = await getAccessToken();
     } catch(err) {
+      cleanup();
       showToast("Auth error: " + (err.message || String(err)), "error");
-      syncBtn.disabled = false;
       return;
     }
+
     function dataUrlToBuffer(dataUrl) {
       var base64 = dataUrl.split(",")[1];
       var binary = atob(base64);
@@ -2023,8 +2045,9 @@
     }
 
     var ok = 0, fail = 0;
-    for (var i = 0; i < state.tasks.length; i++) {
+    for (var i = 0; i < total; i++) {
       var entry = state.tasks[i];
+      progressMsg.textContent = "Syncing contact " + (i + 1) + " of " + total + "…";
       var body = {};
       if (entry.last_name)   { body.surname = entry.last_name; }
       if (entry.first_name)  { body.givenName = entry.first_name; }
@@ -2048,6 +2071,7 @@
           var created = await resp.json();
           ok++;
           if (state.photoDataUrls[i]) {
+            progressMsg.textContent = "Uploading photo " + (i + 1) + " of " + total + "…";
             try {
               await fetch("https://graph.microsoft.com/v1.0/me/contacts/" + created.id + "/photo/$value", {
                 method: "PUT",
@@ -2065,7 +2089,8 @@
         }
       } catch(e) { fail++; }
     }
-    syncBtn.disabled = false;
+
+    cleanup();
     if (fail === 0) {
       showToast(ok + " contact(s) synced to Microsoft Contacts!", "success");
     } else {
@@ -2080,6 +2105,14 @@
 
 })();
 </script>
+<div class="lightbox-overlay" id="syncProgressModal">
+  <div style="background:var(--bg-card);border-radius:var(--radius-md);padding:32px 28px;max-width:340px;width:90%;text-align:center;box-shadow:var(--shadow-lg);">
+    <div class="spinner" style="margin:0 auto 16px;"></div>
+    <p id="syncProgressMsg" style="margin:0 0 6px;font-size:14px;font-weight:600;color:var(--text-primary);">Preparing…</p>
+    <p style="margin:0;font-size:13px;color:var(--text-secondary);">Elapsed: <span id="syncElapsedCounter">0s</span></p>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
 </body>
 </html>
