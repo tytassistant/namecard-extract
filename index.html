@@ -302,7 +302,7 @@
   }
   .entry-field-left {
     display: flex; align-items: center; gap: 4px;
-    flex-shrink: 0; padding-top: 3px;
+    flex-shrink: 0;
   }
   .entry-field-copy {
     width: 28px; height: 28px; flex-shrink: 0;
@@ -319,7 +319,7 @@
     font-family: 'Bricolage Grotesque', sans-serif;
     text-align: left; transition: color var(--transition);
   }
-  .entry-field-key:hover { color: var(--accent); }
+  .entry-field-key:hover { color: var(--text-secondary); }
   .entry-field-input {
     flex: 1; font-family: 'Bricolage Grotesque', sans-serif;
     font-size: 13px; color: var(--text-primary);
@@ -1493,9 +1493,11 @@
           navigator.clipboard.writeText(currentVal).then(function() {
             copyBtn.innerHTML = '<i class="fas fa-check"></i>';
             copyBtn.style.color = "var(--success)";
+            label.style.color = "var(--success)";
             setTimeout(function() {
               copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
               copyBtn.style.color = "";
+              label.style.color = "";
             }, 1500);
           }).catch(function(e) { showToast("Copy failed: " + e.message, "error"); });
         }
@@ -1557,7 +1559,12 @@
           navigator.clipboard.writeText(currentVal).then(function() {
             copyBtn.innerHTML = '<i class="fas fa-check"></i>';
             copyBtn.style.color = "var(--success)";
-            setTimeout(function() { copyBtn.innerHTML = '<i class="fas fa-copy"></i>'; copyBtn.style.color = ""; }, 1500);
+            label.style.color = "var(--success)";
+            setTimeout(function() {
+              copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
+              copyBtn.style.color = "";
+              label.style.color = "";
+            }, 1500);
           }).catch(function(e) { showToast("Copy failed: " + e.message, "error"); });
         }
         copyBtn.addEventListener("click", doExtraCopy);
