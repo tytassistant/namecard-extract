@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Namecard Extract</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  :root {
+    --bg-primary: #FAF5EF;
+    --bg-secondary: #F0EAE0;
+    --bg-card: #FFFFFF;
+    --bg-card-hover: #F8F4EE;
+    --text-primary: #1A1A17;
+    --text-secondary: #6B6860;
+    --text-tertiary: #9C978E;
+    --accent: #B8783D;
+    --accent-hover: #A06830;
+    --accent-light: rgba(184,120,61,0.12);
+    --accent-glow: rgba(184,120,61,0.25);
+    --green-primary: #1B4332;
+    --green-light: #2D6A4F;
+    --green-subtle: rgba(27,67,50,0.08);
+    --border: rgba(26,26,23,0.1);
+    --border-strong: rgba(26,26,23,0.18);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+    --shadow-lg: 0 12px 40px rgba(0,0,0,0.08);
+    --danger: #C44B3F;
+    --danger-light: rgba(196,75,63,0.1);
+    --success: #2D7A4F;
+    --success-light: rgba(45,122,79,0.1);
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
+    --transition: 0.25s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  html.dark {
+    --bg-primary: #131311;
+    --bg-secondary: #1C1C19;
+    --bg-card: #222220;
+    --bg-card-hover: #2A2A27;
+    --text-primary: #EDECE8;
+    --text-secondary: #9C9890;
+    --text-tertiary: #6B6860;
+    --accent: #D4A574;
+    --accent-hover: #E0B588;
+    --accent-light: rgba(212,165,116,0.12);
+    --accent-glow: rgba(212,165,116,0.2);
+    --green-primary: #4DA67A;
+    --green-light: #6BC494;
+    --green-subtle: rgba(77,166,122,0.1);
+    --border: rgba(237,236,232,0.08);
+    --border-strong: rgba(237,236,232,0.14);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.15);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.2);
+    --shadow-lg: 0 12px 40px rgba(0,0,0,0.3);
+    --danger: #E06B5F;
+    --danger-light: rgba(224,107,95,0.12);
+    --success: #4DA67A;
+    --success-light: rgba(77,166,122,0.12);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+    line-height: 1.5;
+  }
+
+  .bg-pattern {
+    position: fixed; inset:0; pointer-events: none; z-index:0;
+    background:
+      radial-gradient(ellipse 70% 50% at 10% 20%, var(--accent-light) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 60% at 90% 80%, var(--green-subtle) 0%, transparent 70%);
+  }
+
+  .app-container {
+    position: relative; z-index:1;
+    max-width: 680px; margin: 0 auto;
+    padding: 24px 16px 80px;
+  }
+
+  .header {
+    text-align: center; margin-bottom: 32px;
+    animation: fadeSlideDown 0.6s ease-out;
+  }
+  .header-logo {
+    display: inline-flex; align-items: center; gap: 10px;
+    margin-bottom: 8px;
+  }
+  .header-logo-icon {
+    width: 44px; height: 44px; border-radius: var(--radius-md);
+    background: linear-gradient(135deg, var(--green-primary), var(--accent));
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 20px;
+    box-shadow: 0 4px 16px var(--accent-glow);
+  }
+  .header h1 {
+    font-size: 28px; font-weight: 800; letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--green-primary), var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header p {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic; color: var(--text-secondary);
+    font-size: 15px; margin-top: 4px;
+  }
+
+  .stepper {
+    display: flex; align-items: center; justify-content: center; gap: 0;
+    margin-bottom: 32px; animation: fadeSlideDown 0.6s ease-out 0.1s both;
+  }
+  .step-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border-radius: 100px;
+    font-size: 13px; font-weight: 600;
+    color: var(--text-tertiary);
+    transition: var(--transition);
+    white-space: nowrap;
+  }
+  .step-item.active { color: var(--accent); background: var(--accent-light); }
+  .step-item.completed { color: var(--success); }
+  .step-num {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    border: 2px solid var(--border-strong);
+    transition: var(--transition);
+  }
+  .step-item.active .step-num { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .step-item.completed .step-num { border-color: var(--success); background: var(--success); color: #fff; }
+  .step-connector { width: 24px; height: 2px; background: var(--border); flex-shrink: 0; }
+  .step-connector.done { background: var(--success); }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px 24px;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 20px;
+    animation: fadeSlideUp 0.5s ease-out;
+  }
+  .card-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .card-desc { font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6; }
+
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block; font-size: 13px; font-weight: 600;
+    color: var(--text-secondary); margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 12px 14px;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 16px; color: var(--text-primary);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    outline: none; transition: var(--transition);
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-light);
+  }
+  .field textarea { resize: vertical; min-height: 80px; }
+  .field .hint { font-size: 12px; color: var(--text-tertiary); margin-top: 4px; line-height: 1.5; }
+  .field .hint a { color: var(--accent); text-decoration: underline; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 12px 22px; border: none; border-radius: var(--radius-sm);
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: var(--transition);
+    text-decoration: none; white-space: nowrap;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--green-primary), var(--green-light));
+    color: #fff; box-shadow: 0 2px 10px rgba(27,67,50,0.25);
+  }
+  .btn-primary:hover { box-shadow: 0 4px 18px rgba(27,67,50,0.35); }
+  .btn-accent {
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+    color: #fff; box-shadow: 0 2px 10px var(--accent-glow);
+  }
+  .btn-accent:hover { box-shadow: 0 4px 18px var(--accent-glow); }
+  .btn-outline {
+    background: transparent;
+    border: 2px solid var(--border-strong);
+    color: var(--text-primary);
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm { padding: 8px 14px; font-size: 13px; }
+  .btn-block { width: 100%; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+  /* Upload buttons */
+  .upload-actions-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .camera-btn {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 6px;
+    background: var(--accent-light);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 16px 12px; min-height: 76px;
+    cursor: pointer; transition: var(--transition);
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 14px; font-weight: 600; color: var(--accent);
+  }
+  .camera-btn:hover { background: var(--accent); color: #fff; }
+  .camera-btn i { font-size: 20px; }
+
+  /* Photo grid */
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .photo-grid:empty { display: none; }
+  .photo-item {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    aspect-ratio: 1;
+  }
+  .photo-item:hover { border-color: var(--accent); }
+  .photo-item img {
+    width: 100%; height: 100%; object-fit: cover;
+    display: block; pointer-events: none; cursor: pointer;
+  }
+  .photo-item .remove-btn {
+    position: absolute; top: 4px; right: 4px;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: rgba(196,75,63,0.9); color: #fff;
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; transition: var(--transition);
+  }
+  .photo-item .remove-btn:hover { background: var(--danger); }
+
+  /* Smart input box */
+  .smart-input-box {
+    border: 1.5px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+    background: var(--bg-card-hover);
+    transition: border-color var(--transition);
+    overflow: hidden;
+  }
+  .smart-input-box:focus-within { border-color: var(--accent); }
+  .smart-input-box textarea {
+    width: 100%; border: none; background: transparent;
+    padding: 12px 14px; font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 16px; color: var(--text-primary);
+    resize: vertical; min-height: 60px; outline: none;
+    line-height: 1.5;
+  }
+  .smart-input-box textarea::placeholder { color: var(--text-tertiary); font-size: 14px; }
+
+  /* Entry cards in review */
+  .entry-list { display: flex; flex-direction: column; gap: 12px; }
+  .entry-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px 18px;
+    transition: var(--transition);
+    animation: fadeSlideUp 0.4s ease-out both;
+  }
+  .entry-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-md); }
+  .entry-card-title {
+    font-size: 15px; font-weight: 700;
+    color: var(--text-primary); margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .entry-field {
+    display: flex; gap: 10px; font-size: 13px;
+    line-height: 1.7; color: var(--text-secondary);
+  }
+  .entry-field-key {
+    min-width: 90px; font-weight: 600; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.04em; font-size: 11px;
+    padding-top: 2px;
+  }
+  .entry-field-val { color: var(--text-primary); flex: 1; }
+  .entry-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--accent-light); color: var(--accent);
+    font-size: 11px; font-weight: 700; margin-right: 8px; flex-shrink: 0;
+  }
+
+  /* Photo thumbnail strip */
+  .photo-strip {
+    display: flex; gap: 8px; overflow-x: auto;
+    padding-bottom: 6px; margin-bottom: 16px;
+    scrollbar-width: thin;
+  }
+  .photo-strip-thumb {
+    width: 56px; height: 56px; flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    overflow: hidden; border: 1px solid var(--border);
+    cursor: pointer; transition: var(--transition);
+  }
+  .photo-strip-thumb:hover { border-color: var(--accent); }
+  .photo-strip-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+  /* Loading */
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 16px auto;
+  }
+  .loading-text { text-align: center; font-size: 14px; color: var(--text-secondary); margin-top: 8px; }
+
+  .section { display: none; }
+  .section.visible { display: block; }
+
+  /* PIN / toggle */
+  .pin-field-wrap { position: relative; }
+  .pin-toggle-btn {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--text-tertiary);
+    cursor: pointer; font-size: 15px; padding: 4px; z-index: 2;
+  }
+  .pin-toggle-btn:hover { color: var(--accent); }
+  .pin-field-wrap input { padding-right: 44px; }
+  .pin-links { font-size: 12px; margin-top: 6px; display: flex; gap: 14px; }
+  .pin-links a { color: var(--accent); cursor: pointer; text-decoration: none; }
+  .pin-links a:hover { text-decoration: underline; }
+  .pin-error { color: var(--danger); font-size: 12px; margin-top: 4px; display: none; }
+
+  .confirm-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center; z-index: 200;
+  }
+  .confirm-box {
+    background: var(--bg-card); border-radius: var(--radius-md); padding: 24px;
+    max-width: 340px; width: 90%; box-shadow: var(--shadow-lg);
+  }
+  .confirm-box p { color: var(--text-primary); font-size: 14px; line-height: 1.5; margin-bottom: 16px; }
+  .confirm-box .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+  .action-bar { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+
+  /* Lightbox */
+  .lightbox-overlay {
+    display: none; position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.88); flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .lightbox-overlay.open { display: flex; }
+  .lightbox-close {
+    position: absolute; top: 12px; right: 16px;
+    background: rgba(255,255,255,0.15); border: none;
+    color: #fff; font-size: 22px; width: 40px; height: 40px;
+    border-radius: 50%; cursor: pointer; z-index: 10;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.3); }
+  .lightbox-img-wrap {
+    width: 100%; height: 100%; overflow: auto;
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+    box-sizing: border-box;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%; object-fit: contain;
+    transition: transform 0.2s ease; transform-origin: center center;
+    cursor: zoom-in; user-select: none; -webkit-user-drag: none;
+  }
+  .lightbox-img-wrap img.zoomed { max-width: none; max-height: none; cursor: grab; }
+
+  /* Toast */
+  .toast-container {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    z-index: 2000; display: flex; flex-direction: column; gap: 8px;
+    pointer-events: none;
+  }
+  .toast {
+    padding: 12px 20px; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 600;
+    box-shadow: var(--shadow-lg);
+    animation: toastIn 0.4s ease-out;
+    pointer-events: auto;
+  }
+  .toast.error { background: var(--danger); color: #fff; }
+  .toast.success { background: var(--success); color: #fff; }
+  .toast.info { background: var(--green-primary); color: #fff; }
+
+  .empty-state { text-align: center; padding: 32px 16px; color: var(--text-tertiary); }
+  .empty-state i { font-size: 36px; margin-bottom: 12px; display: block; }
+
+  @media (max-width: 480px) {
+    .app-container { padding: 16px 12px 80px; }
+    .card { padding: 20px 16px; }
+    .header h1 { font-size: 24px; }
+    .step-item { padding: 4px 8px; font-size: 11px; }
+    .step-item span:not(.step-num) { display: none; }
+    .step-connector { width: 16px; }
+  }
+
+  @keyframes fadeSlideDown {
+    from { opacity:0; transform: translateY(-16px); }
+    to { opacity:1; transform: translateY(0); }
+  }
+  @keyframes fadeSlideUp {
+    from { opacity:0; transform: translateY(16px); }
+    to { opacity:1; transform: translateY(0); }
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes toastIn {
+    from { opacity:0; transform: translateY(12px); }
+    to { opacity:1; transform: translateY(0); }
+  }
+  .animate-pulse { animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+</style>
+</head>
+<body>
+
+<div class="bg-pattern"></div>
+
+<div class="app-container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-logo">
+      <div class="header-logo-icon"><i class="fas fa-address-card"></i></div>
+      <h1>Namecard Extract</h1>
+    </div>
+    <p>AI-powered namecard information extraction</p>
+  </div>
+
+  <!-- Stepper -->
+  <div class="stepper" id="stepper">
+    <div class="step-item active" data-step="1">
+      <span class="step-num">1</span><span>Login</span>
+    </div>
+    <div class="step-connector" id="conn2"></div>
+    <div class="step-item" data-step="2">
+      <span class="step-num">2</span><span>Capture</span>
+    </div>
+    <div class="step-connector" id="conn3"></div>
+    <div class="step-item" data-step="3">
+      <span class="step-num">3</span><span>Review</span>
+    </div>
+  </div>
+
+  <!-- ======= SECTION 1: AUTH ======= -->
+  <div class="section visible" id="section-auth">
+    <div class="card" id="poeKeyCard">
+      <div class="card-title"><i class="fas fa-key" style="margin-right:6px;"></i> Poe API Key</div>
+
+      <div id="pinStateA">
+        <div class="card-desc" id="pinStateADesc">
+          Used for AI-powered namecard extraction. Get your key from <a href="https://poe.com/api_key" target="_blank" rel="noopener"><strong>poe.com/api_key</strong></a>.
+        </div>
+        <div class="field">
+          <div class="pin-field-wrap">
+            <input type="password" id="poeApiKeyInput" name="poe_api_token" placeholder="Enter your Poe API key" inputmode="text" autocomplete="current-password" data-form-type="other" data-lpignore="true" style="font-size:16px;">
+            <button type="button" class="pin-toggle-btn" data-target="poeApiKeyInput" title="Show/hide key"><i class="fas fa-eye"></i></button>
+          </div>
+        </div>
+        <div style="margin-top:4px; margin-bottom:8px;">
+          <div class="card-desc" style="margin-bottom:10px;"><i class="fas fa-lock" style="margin-right:4px;"></i> Set a PIN to save this key.</div>
+          <div class="field" style="margin-bottom:8px;">
+            <div class="pin-field-wrap">
+              <input type="text" id="pinSetInput" placeholder="Enter 6-character PIN" maxlength="6" inputmode="text" autocomplete="nope" data-form-type="other" data-lpignore="true" style="font-size:16px;">
+              <button type="button" class="pin-toggle-btn" data-target="pinSetInput" title="Show/hide PIN"><i class="fas fa-eye"></i></button>
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:4px;">
+            <div class="pin-field-wrap">
+              <input type="text" id="pinConfirmInput" placeholder="Confirm PIN" maxlength="6" inputmode="text" autocomplete="nope" data-form-type="other" data-lpignore="true" style="font-size:16px;">
+              <button type="button" class="pin-toggle-btn" data-target="pinConfirmInput" title="Show/hide PIN"><i class="fas fa-eye"></i></button>
+            </div>
+          </div>
+          <div class="card-desc" style="margin-bottom:4px;">Alphanumeric, exactly 6 characters. Your key is encrypted locally — PIN is never stored.</div>
+          <div class="pin-error" id="pinSetError"></div>
+        </div>
+        <div id="pinStateACancel" style="display:none; margin-bottom:8px;">
+          <div class="pin-links"><a id="pinCancelChangeBtn">Cancel</a></div>
+        </div>
+      </div>
+
+      <div id="pinStateB" style="display:none;">
+        <div class="card-desc">Your key is saved. Enter your PIN to unlock.</div>
+        <div class="field" style="margin-bottom:4px;">
+          <div class="pin-field-wrap">
+            <input type="text" id="pinUnlockInput" placeholder="Enter 6-character PIN" maxlength="6" inputmode="text" autocomplete="nope" data-form-type="other" data-lpignore="true" style="font-size:16px;">
+            <button type="button" class="pin-toggle-btn" data-target="pinUnlockInput" title="Show/hide PIN"><i class="fas fa-eye"></i></button>
+          </div>
+          <div class="pin-error" id="pinUnlockError"></div>
+        </div>
+        <div class="pin-links">
+          <a id="forgotPinBtn">Forgot PIN?</a>
+          <a id="changeApiKeyBtn">Change API key</a>
+        </div>
+      </div>
+
+      <button class="btn btn-block" id="continueToUploadBtn" type="button" style="margin-top:12px; background:var(--accent); color:#fff;">
+        <i class="fas fa-arrow-right" style="margin-right:6px;"></i> Continue to capture
+      </button>
+    </div>
+  </div>
+
+  <!-- ======= SECTION 2: CAPTURE ======= -->
+  <div class="section" id="section-upload">
+    <div id="authStatusBar" style="display:flex; align-items:center; gap:10px; padding:12px 16px; border-radius:12px; background:var(--success-light); margin-bottom:16px; font-size:14px; font-weight:600; color:var(--success);">
+      <div id="userAvatar" style="width:32px; height:32px; border-radius:50%; background:var(--success); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700;">P</div>
+      <span id="userName">Poe connected</span>
+    </div>
+
+    <div class="card">
+
+      <!-- 1. Model selector -->
+      <div style="margin-bottom:16px;">
+        <label style="font-size:13px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:6px;">
+          Model
+        </label>
+        <select id="modelSelect" style="width:100%; padding:10px 12px; font-family:'Bricolage Grotesque',sans-serif; font-size:15px; color:var(--text-primary); background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-sm); outline:none; cursor:pointer;">
+          <option value="gpt-5.4-mini">gpt-5.4-mini</option>
+          <option value="gpt-5-mini">gpt-5-mini</option>
+          <option value="gemini-3-flash">gemini-3-flash</option>
+          <option value="gemini-3.5-flash">gemini-3.5-flash</option>
+          <option value="gemma-4-31b">gemma-4-31b</option>
+        </select>
+      </div>
+
+      <!-- 2. Instruction -->
+      <div style="margin-bottom:16px;">
+        <label style="font-size:13px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:6px;">
+          Extra instruction <span style="font-weight:400; text-transform:none; letter-spacing:0;">(optional)</span>
+        </label>
+        <div class="smart-input-box">
+          <textarea id="extraInstruction" placeholder="e.g. focus on Japanese namecards, extract katakana readings" rows="2"></textarea>
+        </div>
+      </div>
+
+      <!-- 3. Upload buttons -->
+      <input type="file" id="photoInput" accept="image/*" multiple hidden>
+      <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
+
+      <div class="upload-actions-row">
+        <label class="camera-btn" id="photoUploadBtn" for="photoInput">
+          <i class="fas fa-images"></i>
+          <div>Upload Photos</div>
+        </label>
+        <label class="camera-btn" id="cameraCaptureBtn" for="cameraInput">
+          <i class="fas fa-camera"></i>
+          <div>Take Photo</div>
+        </label>
+      </div>
+
+      <!-- 4. Counter -->
+      <div id="photoCounter" style="font-size:13px; color:var(--text-secondary);">0 / 30 namecards selected</div>
+
+      <!-- 5. Photo grid -->
+      <div class="photo-grid" id="photoGrid"></div>
+
+      <!-- 6. Extract button -->
+      <button class="btn btn-accent btn-block" id="extractBtn" type="button" disabled style="margin-top:16px;">
+        <i class="fas fa-wand-magic-sparkles"></i> Extract
+      </button>
+
+    </div>
+  </div>
+
+  <!-- ======= SECTION 3: REVIEW ======= -->
+  <div class="section" id="section-review">
+    <div class="card">
+      <div class="card-title" id="reviewTitle">Extracted namecards</div>
+      <div class="card-desc" id="reviewDesc">Review the extracted information below.</div>
+
+      <!-- Photo thumbnail strip -->
+      <div class="photo-strip" id="photoStrip" style="display:none;"></div>
+
+      <!-- Loading -->
+      <div id="extractionLoading" style="display:none;">
+        <div class="spinner"></div>
+        <div class="loading-text animate-pulse">Extracting namecard information…</div>
+      </div>
+
+      <!-- Results -->
+      <div class="entry-list" id="entryList"></div>
+
+      <!-- Action bar -->
+      <div class="action-bar" id="reviewActions" style="display:none;">
+        <button class="btn btn-outline" id="backToCaptureBtn" type="button">
+          <i class="fas fa-arrow-left"></i> Back
+        </button>
+        <button class="btn btn-primary" id="copyResultsBtn" type="button" style="flex:1;">
+          <i class="fas fa-copy"></i> Copy Results
+        </button>
+        <button class="btn btn-accent" id="captureNewBtn" type="button">
+          <i class="fas fa-camera"></i> Capture New
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Lightbox -->
+<div class="lightbox-overlay" id="lightboxOverlay">
+  <button class="lightbox-close" id="lightboxClose" type="button"><i class="fas fa-xmark"></i></button>
+  <div class="lightbox-img-wrap" id="lightboxWrap">
+    <img id="lightboxImg" alt="Namecard photo">
+  </div>
+</div>
+
+<script>
+(function() {
+  "use strict";
+
+  // ========== DARK MODE ==========
+  if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+    document.documentElement.classList.add("dark");
+  }
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function(e) {
+    if (e.matches) { document.documentElement.classList.add("dark"); }
+    else { document.documentElement.classList.remove("dark"); }
+  });
+
+  // ========== STORAGE CHECK ==========
+  var storageAvailable = false;
+  try {
+    var testKey = "__nc_test__";
+    window["localStorage"].setItem(testKey, "1");
+    window["localStorage"].removeItem(testKey);
+    storageAvailable = true;
+  } catch(e) { storageAvailable = false; }
+
+  if (!storageAvailable) {
+    var container = document.querySelector(".app-container");
+    if (container) {
+      container.innerHTML =
+        '<div class="header"><div class="header-logo"><div class="header-logo-icon"><i class="fas fa-address-card"></i></div><h1>Namecard Extract</h1></div></div>' +
+        '<div class="card" style="text-align:center;">' +
+          '<div style="font-size:48px; margin-bottom:16px; color:var(--accent);"><i class="fas fa-globe"></i></div>' +
+          '<h2 style="font-size:20px; font-weight:700; margin-bottom:12px;">Browser storage required</h2>' +
+          '<p style="color:var(--text-secondary); line-height:1.7; font-size:14px;">This app needs localStorage to securely store your encrypted API key.</p>' +
+        '</div>';
+    }
+    return;
+  }
+
+  // ========== STATE ==========
+  var state = {
+    currentStep: 1,
+    model: "gpt-5.4-mini",
+    tasks: []
+  };
+
+  var selectedFiles = [];
+  var MAX_PHOTOS = 30;
+
+  // ========== DOM REFS ==========
+  var $id = function(id) { return document.getElementById(id); };
+
+  var poeApiKeyInput = $id("poeApiKeyInput");
+  var modelSelect = $id("modelSelect");
+  if (modelSelect) {
+    modelSelect.value = state.model;
+    modelSelect.addEventListener("change", function() { state.model = modelSelect.value; });
+  }
+  var continueToUploadBtn = $id("continueToUploadBtn");
+  var extractBtn = $id("extractBtn");
+  var photoInput = $id("photoInput");
+  var cameraInput = $id("cameraInput");
+  var photoGrid = $id("photoGrid");
+  var photoCounter = $id("photoCounter");
+
+  // ========== TOAST ==========
+  function showToast(msg, type) {
+    type = type || "info";
+    var tc = $id("toastContainer");
+    var t = document.createElement("div");
+    t.className = "toast " + type;
+    t.textContent = msg;
+    tc.appendChild(t);
+    setTimeout(function() {
+      t.style.opacity = "0";
+      t.style.transition = "opacity 0.3s";
+      setTimeout(function() { t.remove(); }, 300);
+    }, 4000);
+  }
+
+  // ========== STEPPER ==========
+  function updateStepper(step) {
+    state.currentStep = step;
+    var items = document.querySelectorAll(".step-item");
+    var connectors = document.querySelectorAll(".step-connector");
+    items.forEach(function(el, i) {
+      var s = i + 1;
+      el.classList.remove("active", "completed");
+      if (s < step) { el.classList.add("completed"); }
+      else if (s === step) { el.classList.add("active"); }
+    });
+    connectors.forEach(function(el, i) {
+      el.classList.toggle("done", i + 1 < step);
+    });
+  }
+
+  function showSection(name) {
+    document.querySelectorAll(".section").forEach(function(el) { el.classList.remove("visible"); });
+    $id("section-" + name).classList.add("visible");
+  }
+
+  // ========== LOCALSTORAGE ==========
+  var appStorage = window["localStorage"];
+  var decryptedPoeKey = "";
+
+  function getPoeApiKey() {
+    return decryptedPoeKey || poeApiKeyInput.value.trim();
+  }
+
+  // ========== PIN ENCRYPTION ==========
+  var STORAGE_KEY_ENCRYPTED = "namecard_enckey";
+
+  function hasSavedEncryptedKey() {
+    try { return appStorage && !!appStorage.getItem(STORAGE_KEY_ENCRYPTED); } catch(e) { return false; }
+  }
+  function clearSavedEncryptedKey() {
+    try { if (appStorage) { appStorage.removeItem(STORAGE_KEY_ENCRYPTED); } } catch(e) {}
+  }
+
+  async function deriveKey(pin, salt) {
+    var enc = new TextEncoder();
+    var keyMaterial = await crypto.subtle.importKey("raw", enc.encode(pin), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey(
+      { name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" },
+      keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
+    );
+  }
+
+  async function encryptAndStore(apiKey, pin) {
+    var enc = new TextEncoder();
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    var key = await deriveKey(pin, salt);
+    var ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, enc.encode(apiKey));
+    var data = {
+      s: btoa(String.fromCharCode.apply(null, salt)),
+      i: btoa(String.fromCharCode.apply(null, iv)),
+      c: btoa(String.fromCharCode.apply(null, new Uint8Array(ciphertext)))
+    };
+    appStorage.setItem(STORAGE_KEY_ENCRYPTED, JSON.stringify(data));
+  }
+
+  function b64ToUint8(b64) {
+    var bin = atob(b64);
+    var arr = new Uint8Array(bin.length);
+    for (var j = 0; j < bin.length; j++) { arr[j] = bin.charCodeAt(j); }
+    return arr;
+  }
+
+  async function decryptWithPin(pin) {
+    var raw = appStorage.getItem(STORAGE_KEY_ENCRYPTED);
+    if (!raw) { throw new Error("No saved key"); }
+    var data = JSON.parse(raw);
+    var salt = b64ToUint8(data.s), iv = b64ToUint8(data.i), ciphertext = b64ToUint8(data.c);
+    var key = await deriveKey(pin, salt);
+    var decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, ciphertext);
+    return new TextDecoder().decode(decrypted);
+  }
+
+  // ========== PIN UI ==========
+  var pinStateA = $id("pinStateA");
+  var pinStateB = $id("pinStateB");
+  var pinStateADesc = $id("pinStateADesc");
+  var pinSetInput = $id("pinSetInput");
+  var pinConfirmInput = $id("pinConfirmInput");
+  var pinSetError = $id("pinSetError");
+  var pinUnlockInput = $id("pinUnlockInput");
+  var pinUnlockError = $id("pinUnlockError");
+  var forgotPinBtn = $id("forgotPinBtn");
+  var changeApiKeyBtn = $id("changeApiKeyBtn");
+  var pinStateACancel = $id("pinStateACancel");
+  var pinCancelChangeBtn = $id("pinCancelChangeBtn");
+
+  function showPinError(el, msg) { el.textContent = msg; el.style.display = msg ? "" : "none"; }
+
+  function switchToPinStateA(isChange) {
+    pinStateA.style.display = "";
+    pinStateB.style.display = "none";
+    poeApiKeyInput.value = "";
+    if (pinSetInput._autoMask) { pinSetInput._autoMask.clear(); } else { pinSetInput.value = ""; }
+    if (pinConfirmInput._autoMask) { pinConfirmInput._autoMask.clear(); } else { pinConfirmInput.value = ""; }
+    showPinError(pinSetError, "");
+    if (isChange) {
+      pinStateADesc.innerHTML = "Enter a new API key and set a new PIN.";
+      pinStateACancel.style.display = "";
+    } else {
+      pinStateADesc.innerHTML = 'Used for AI-powered namecard extraction. Get your key from <a href="https://poe.com/api_key" target="_blank" rel="noopener"><strong>poe.com/api_key</strong></a>.';
+      pinStateACancel.style.display = "none";
+    }
+  }
+
+  function switchToPinStateB() {
+    pinStateA.style.display = "none";
+    pinStateB.style.display = "";
+    if (pinUnlockInput._autoMask) { pinUnlockInput._autoMask.clear(); } else { pinUnlockInput.value = ""; }
+    showPinError(pinUnlockError, "");
+  }
+
+  function isValidPin(pin) { return /^[a-zA-Z0-9]{6}$/.test(pin); }
+
+  // ========== AUTO-MASK INPUT ==========
+  function setupAutoMaskInput(input) {
+    var realValue = "", showFull = false, timerId = null;
+
+    function renderMasked() {
+      if (showFull) { input.value = realValue; }
+      else if (realValue.length === 0) { input.value = ""; }
+      else { input.value = "●".repeat(realValue.length); }
+    }
+    function renderLastVisible() {
+      if (realValue.length <= 1) { input.value = realValue; }
+      else { input.value = "●".repeat(realValue.length - 1) + realValue.charAt(realValue.length - 1); }
+    }
+
+    input.addEventListener("input", function() {
+      if (showFull) { realValue = input.value; return; }
+      var cursorPos = input.selectionStart || 0;
+      var rawVal = input.value;
+      var oldLen = realValue.length, newLen = rawVal.length;
+      if (newLen > oldLen) {
+        var addedCount = newLen - oldLen;
+        var insertPos = cursorPos - addedCount;
+        if (insertPos < 0) { insertPos = 0; }
+        var added = "";
+        for (var k = insertPos; k < insertPos + addedCount; k++) {
+          var ch = rawVal.charAt(k);
+          if (ch !== "●") { added += ch; } else { added += realValue.charAt(k) || ""; }
+        }
+        realValue = realValue.substring(0, insertPos) + added + realValue.substring(insertPos);
+      } else if (newLen < oldLen) {
+        var deletedCount = oldLen - newLen;
+        realValue = realValue.substring(0, cursorPos) + realValue.substring(cursorPos + deletedCount);
+      }
+      if (timerId) { clearTimeout(timerId); }
+      renderLastVisible();
+      var savedPos = cursorPos;
+      timerId = setTimeout(function() {
+        renderMasked();
+        try { input.setSelectionRange(savedPos, savedPos); } catch(ignored) {}
+        timerId = null;
+      }, 500);
+    });
+
+    input._autoMask = {
+      getRealValue: function() { return realValue; },
+      setRealValue: function(v) { realValue = v; renderMasked(); },
+      toggleShow: function(show) {
+        showFull = show;
+        if (timerId) { clearTimeout(timerId); timerId = null; }
+        if (show) { input.value = realValue; } else { renderMasked(); }
+      },
+      isShowFull: function() { return showFull; },
+      clear: function() {
+        realValue = ""; showFull = false;
+        if (timerId) { clearTimeout(timerId); timerId = null; }
+        input.value = "";
+      }
+    };
+  }
+
+  setupAutoMaskInput(pinSetInput);
+  setupAutoMaskInput(pinConfirmInput);
+  setupAutoMaskInput(pinUnlockInput);
+
+  [pinSetInput, pinConfirmInput].forEach(function(input) {
+    input.addEventListener("keydown", function(e) {
+      if (e.key === "Enter") { e.preventDefault(); continueToUploadBtn.click(); }
+    });
+  });
+  pinUnlockInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") { e.preventDefault(); continueToUploadBtn.click(); }
+  });
+
+  // ========== TOGGLE BUTTONS ==========
+  document.querySelectorAll(".pin-toggle-btn").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      var targetId = btn.getAttribute("data-target");
+      var targetInput = $id(targetId);
+      if (!targetInput) { return; }
+      var icon = btn.querySelector("i");
+      if (targetInput._autoMask) {
+        var newShow = !targetInput._autoMask.isShowFull();
+        targetInput._autoMask.toggleShow(newShow);
+        icon.className = newShow ? "fas fa-eye-slash" : "fas fa-eye";
+      } else {
+        var isPwd = targetInput.type === "password";
+        targetInput.type = isPwd ? "text" : "password";
+        icon.className = isPwd ? "fas fa-eye-slash" : "fas fa-eye";
+      }
+    });
+  });
+
+  // ========== CONFIRM DIALOG ==========
+  function showConfirmDialog(message, onConfirm) {
+    var overlay = document.createElement("div");
+    overlay.className = "confirm-overlay";
+    overlay.innerHTML =
+      '<div class="confirm-box"><p>' + message + '</p>' +
+      '<div class="confirm-actions">' +
+      '<button class="btn btn-outline btn-sm" data-action="cancel">Cancel</button>' +
+      '<button class="btn btn-primary btn-sm" data-action="confirm">Confirm</button>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+    overlay.querySelector('[data-action="cancel"]').addEventListener("click", function() { overlay.remove(); });
+    overlay.querySelector('[data-action="confirm"]').addEventListener("click", function() { overlay.remove(); onConfirm(); });
+    overlay.addEventListener("click", function(e) { if (e.target === overlay) { overlay.remove(); } });
+  }
+
+  forgotPinBtn.addEventListener("click", function() {
+    showConfirmDialog(
+      "This will clear your saved key. You’ll need to enter the full API key again and set a new PIN.",
+      function() {
+        clearSavedEncryptedKey();
+        decryptedPoeKey = "";
+        switchToPinStateA(false);
+        showToast("Saved key cleared. Enter your API key and set a new PIN.", "info");
+      }
+    );
+  });
+  changeApiKeyBtn.addEventListener("click", function() { switchToPinStateA(true); });
+  pinCancelChangeBtn.addEventListener("click", function() { switchToPinStateB(); });
+
+  // ========== PIN VALIDATION ==========
+  async function validateAndEncryptStateA() {
+    var apiKey = poeApiKeyInput.value.trim();
+    if (!apiKey) { showToast("Please enter your Poe API key", "error"); return false; }
+    var pin = pinSetInput._autoMask.getRealValue();
+    var confirmPin = pinConfirmInput._autoMask.getRealValue();
+    if (!pin || !confirmPin) { showPinError(pinSetError, "Please enter and confirm your PIN."); return false; }
+    if (!isValidPin(pin)) { showPinError(pinSetError, "PIN must be exactly 6 alphanumeric characters."); return false; }
+    if (pin !== confirmPin) { showPinError(pinSetError, "PINs do not match."); return false; }
+    showPinError(pinSetError, "");
+    try {
+      await encryptAndStore(apiKey, pin);
+      decryptedPoeKey = apiKey;
+      return true;
+    } catch(err) { showPinError(pinSetError, "Encryption failed: " + err.message); return false; }
+  }
+
+  async function validateAndDecryptStateB() {
+    var pin = pinUnlockInput._autoMask.getRealValue();
+    if (!pin) { showPinError(pinUnlockError, "Please enter your PIN."); return false; }
+    if (!isValidPin(pin)) { showPinError(pinUnlockError, "PIN must be exactly 6 alphanumeric characters."); return false; }
+    showPinError(pinUnlockError, "");
+    try {
+      var key = await decryptWithPin(pin);
+      decryptedPoeKey = key;
+      return true;
+    } catch(err) { showPinError(pinUnlockError, "Wrong PIN. Please try again."); return false; }
+  }
+
+  function initPinState() {
+    if (hasSavedEncryptedKey()) { switchToPinStateB(); } else { switchToPinStateA(false); }
+  }
+
+  continueToUploadBtn.addEventListener("click", async function() {
+    if (pinStateB.style.display !== "none") {
+      var unlockOk = await validateAndDecryptStateB();
+      if (!unlockOk) { return; }
+    } else {
+      var setupOk = await validateAndEncryptStateA();
+      if (!setupOk) { return; }
+    }
+    updateStepper(2);
+    showSection("upload");
+  });
+
+  // ========== IMAGE COMPRESSION ==========
+  function compressImageBlob(file, targetWidth) {
+    targetWidth = targetWidth || 1800;
+    return new Promise(function(resolve, reject) {
+      if (file.type === "image/jpeg" && file.size <= 750000) { return resolve(file); }
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function() {
+        URL.revokeObjectURL(url);
+        var w = img.naturalWidth, h = img.naturalHeight;
+        if (w > targetWidth) { h = Math.round((targetWidth / w) * h); w = targetWidth; }
+        var canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        canvas.toBlob(function(blob) {
+          if (!blob) { return reject(new Error("Compression failed")); }
+          var name = file.name;
+          var dot = name.lastIndexOf(".");
+          if (dot >= 0) { name = name.substring(0, dot) + ".jpg"; } else { name += ".jpg"; }
+          resolve(new File([blob], name, { type: "image/jpeg" }));
+        }, "image/jpeg", 1.0);
+      };
+      img.onerror = function() {
+        URL.revokeObjectURL(url);
+        var isHeic = file.type === "image/heic" || file.type === "image/heif" ||
+          file.name.toLowerCase().endsWith(".heic") || file.name.toLowerCase().endsWith(".heif");
+        reject(new Error(isHeic ? "HEIC format is not supported. Please convert to JPEG first." : "Image load failed."));
+      };
+      img.src = url;
+    });
+  }
+
+  function readAsDataUrl(file) {
+    return new Promise(function(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function(e) { resolve(e.target.result); };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ========== PHOTO GRID ==========
+  function updatePhotoCounter() {
+    var count = selectedFiles.length;
+    photoCounter.textContent = count + " / " + MAX_PHOTOS + " namecards selected";
+    var atMax = count >= MAX_PHOTOS;
+    photoInput.disabled = atMax;
+    cameraInput.disabled = atMax;
+    updateExtractBtnState();
+  }
+
+  function updateExtractBtnState() {
+    extractBtn.disabled = selectedFiles.length === 0;
+  }
+
+  function addPhotos(fileList) {
+    var filesToAdd = Array.from(fileList).filter(function(f) { return f.type.startsWith("image/"); });
+    if (filesToAdd.length === 0) { return false; }
+    var currentCount = selectedFiles.length;
+    if (currentCount + filesToAdd.length > MAX_PHOTOS) {
+      showToast("Maximum " + MAX_PHOTOS + " photos allowed.", "error");
+      return false;
+    }
+    filesToAdd.forEach(function(file) {
+      var isDuplicate = selectedFiles.some(function(f) {
+        return f.file.name === file.name && f.file.size === file.size;
+      });
+      if (isDuplicate) { return; }
+      selectedFiles.push({
+        file: file,
+        previewUrl: URL.createObjectURL(file)
+      });
+    });
+    updatePhotoCounter();
+    renderPhotoGrid();
+    return true;
+  }
+
+  function renderPhotoGrid() {
+    photoGrid.innerHTML = "";
+    if (selectedFiles.length === 0) { return; }
+    selectedFiles.forEach(function(item, index) {
+      var div = document.createElement("div");
+      div.className = "photo-item";
+
+      var img = document.createElement("img");
+      img.src = item.previewUrl;
+      img.loading = "lazy";
+      img.addEventListener("click", function() { openLightbox(item.previewUrl); });
+
+      var removeBtn = document.createElement("button");
+      removeBtn.className = "remove-btn";
+      removeBtn.innerHTML = "&times;";
+      removeBtn.title = "Remove photo";
+      removeBtn.setAttribute("data-remove-index", String(index));
+
+      div.appendChild(img);
+      div.appendChild(removeBtn);
+      photoGrid.appendChild(div);
+    });
+  }
+
+  photoGrid.addEventListener("click", function(e) {
+    var removeBtn = e.target.closest(".remove-btn");
+    if (!removeBtn) { return; }
+    var index = parseInt(removeBtn.getAttribute("data-remove-index"), 10);
+    var item = selectedFiles[index];
+    if (item && item.previewUrl) {
+      URL.revokeObjectURL(item.previewUrl);
+    }
+    selectedFiles.splice(index, 1);
+    updatePhotoCounter();
+    renderPhotoGrid();
+  });
+
+  photoInput.addEventListener("change", function() {
+    if (!this.files || this.files.length === 0) { return; }
+    var ok = addPhotos(this.files);
+    if (ok) { this.value = ""; }
+  });
+
+  cameraInput.addEventListener("change", function() {
+    if (!this.files || this.files.length === 0) { return; }
+    var ok = addPhotos(this.files);
+    if (ok) { this.value = ""; }
+  });
+
+  $id("photoUploadBtn").addEventListener("click", function(e) {
+    if (photoInput.disabled) {
+      e.preventDefault();
+      showToast("Maximum " + MAX_PHOTOS + " photos selected.", "error");
+    }
+  });
+
+  $id("cameraCaptureBtn").addEventListener("click", function(e) {
+    if (cameraInput.disabled) {
+      e.preventDefault();
+      showToast("Maximum " + MAX_PHOTOS + " photos selected.", "error");
+    }
+  });
+
+  // ========== LIGHTBOX ==========
+  var lbZoom = 1;
+  var lightboxOverlay = $id("lightboxOverlay");
+  var lightboxImg = $id("lightboxImg");
+  var lightboxClose = $id("lightboxClose");
+  var lightboxWrap = $id("lightboxWrap");
+
+  function applyZoom() {
+    lightboxImg.style.transform = "scale(" + lbZoom + ")";
+    if (lbZoom > 1) {
+      lightboxImg.classList.add("zoomed");
+      lightboxWrap.style.alignItems = "flex-start";
+      lightboxWrap.style.justifyContent = "flex-start";
+    } else {
+      lightboxImg.classList.remove("zoomed");
+      lightboxWrap.style.alignItems = "center";
+      lightboxWrap.style.justifyContent = "center";
+    }
+  }
+  function openLightbox(src) {
+    lightboxImg.src = src;
+    lbZoom = 1; applyZoom();
+    lightboxOverlay.classList.add("open");
+  }
+  function closeLightbox() {
+    lightboxOverlay.classList.remove("open");
+    lightboxImg.src = "";
+    lbZoom = 1; applyZoom();
+  }
+  lightboxClose.addEventListener("click", closeLightbox);
+  lightboxOverlay.addEventListener("click", function(e) {
+    if (e.target === lightboxOverlay || e.target === lightboxWrap) { closeLightbox(); }
+  });
+  lightboxWrap.addEventListener("dblclick", function(e) {
+    e.preventDefault();
+    if (lbZoom >= 3) { lbZoom = 1; } else { lbZoom = Math.min(lbZoom + 1, 4); }
+    applyZoom();
+  });
+  lightboxWrap.addEventListener("wheel", function(e) {
+    e.preventDefault();
+    lbZoom = Math.max(0.5, Math.min(4, lbZoom + (e.deltaY < 0 ? 0.3 : -0.3)));
+    applyZoom();
+  }, { passive: false });
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape" && lightboxOverlay.classList.contains("open")) { closeLightbox(); }
+  });
+
+  // ========== EXTRACT ==========
+  extractBtn.addEventListener("click", async function() {
+    if (selectedFiles.length === 0) {
+      showToast("Please add at least one photo.", "error");
+      return;
+    }
+    updateStepper(3);
+    showSection("review");
+
+    var extractionLoading = $id("extractionLoading");
+    var entryList = $id("entryList");
+    var reviewActions = $id("reviewActions");
+    var photoStrip = $id("photoStrip");
+
+    extractionLoading.style.display = "block";
+    entryList.innerHTML = "";
+    reviewActions.style.display = "none";
+    photoStrip.style.display = "none";
+
+    await buildAndExtract();
+  });
+
+  async function buildAndExtract() {
+    var extractionLoading = $id("extractionLoading");
+    var reviewActions = $id("reviewActions");
+
+    var poeKey = getPoeApiKey();
+    if (!poeKey) {
+      extractionLoading.style.display = "none";
+      showToast("Poe API key missing. Please go back and log in.", "error");
+      reviewActions.style.display = "flex";
+      return;
+    }
+
+    // Compress all photos
+    var compressedFiles = [];
+    for (var i = 0; i < selectedFiles.length; i++) {
+      try {
+        var compressed = await compressImageBlob(selectedFiles[i].file);
+        compressedFiles.push(compressed);
+      } catch(err) {
+        showToast("Photo " + (i + 1) + ": " + err.message, "error");
+      }
+    }
+
+    if (compressedFiles.length === 0) {
+      extractionLoading.style.display = "none";
+      showToast("No valid photos to process.", "error");
+      reviewActions.style.display = "flex";
+      return;
+    }
+
+    // Read as data URLs
+    var dataUrls = [];
+    for (var j = 0; j < compressedFiles.length; j++) {
+      try {
+        var dataUrl = await readAsDataUrl(compressedFiles[j]);
+        dataUrls.push(dataUrl);
+      } catch(err) {
+        showToast("Failed to read photo " + (j + 1) + ".", "error");
+      }
+    }
+
+    var extraInstruction = ($id("extraInstruction").value || "").trim();
+
+    // Build prompt — PLACEHOLDER: replace with final prompt when user provides it
+    var promptLines = [
+      "You are an expert at reading business namecards.",
+      "",
+      "Analyze each namecard image in this message carefully. Extract all contact information from each namecard and return the results as a JSON array — one object per namecard.",
+      "",
+      "## Required output format",
+      "Return ONLY a valid JSON array. Example:",
+      "[",
+      '  {"name": "John Smith", "title": "Sales Director", "company": "Acme Corp", "email": "john@acme.com", "phone": "+852 1234 5678", "address": "1 Queen\'s Road, Hong Kong"},',
+      '  {"name": "田中太郎", "title": "部長", "company": "株式会社ABC", "email": "tanaka@abc.co.jp", "phone": "03-1234-5678", "address": "東京都千代田区1-1"}',
+      "]",
+      "",
+      "## Rules",
+      "1. Extract one JSON object per namecard image.",
+      "2. Include all visible fields: name, title, company, email, phone, address, website, and any other fields present.",
+      "3. Transcribe text exactly as written — do not translate.",
+      "4. If a field is not visible or not present, omit it from the object.",
+      "5. If a namecard has both Chinese and English names or text, include both.",
+      "",
+      "Return ONLY the JSON array. No explanations, no markdown code blocks, just the raw JSON."
+    ];
+
+    if (extraInstruction) {
+      promptLines.push("");
+      promptLines.push("=== EXTRA INSTRUCTION ===");
+      promptLines.push(extraInstruction);
+    }
+
+    var promptText = promptLines.join("\n");
+
+    // Build message content with all images
+    var messageContent = [{ type: "text", text: promptText }];
+    dataUrls.forEach(function(url) {
+      messageContent.push({ type: "image_url", image_url: { url: url } });
+    });
+
+    try {
+      var res = await fetch("https://api.poe.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + poeKey,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: state.model,
+          stream: false,
+          messages: [{ role: "user", content: messageContent }]
+        })
+      });
+
+      if (!res.ok) {
+        var errBody = "";
+        try { errBody = await res.text(); } catch(ignored) {}
+        throw new Error("Poe API error (HTTP " + res.status + "): " + errBody);
+      }
+
+      var poeData = await res.json();
+      var content = "";
+      if (poeData.choices && poeData.choices.length > 0 && poeData.choices[0].message) {
+        content = poeData.choices[0].message.content || "";
+      }
+      if (!content) { throw new Error("Empty response from AI"); }
+
+      processExtractionResult(content, dataUrls);
+
+    } catch(err) {
+      extractionLoading.style.display = "none";
+      showToast("Extraction failed: " + (err.message || String(err)), "error");
+      reviewActions.style.display = "flex";
+    }
+  }
+
+  function processExtractionResult(content, dataUrls) {
+    var extractionLoading = $id("extractionLoading");
+    var entryList = $id("entryList");
+    var reviewActions = $id("reviewActions");
+    var reviewTitle = $id("reviewTitle");
+    var reviewDesc = $id("reviewDesc");
+    var photoStrip = $id("photoStrip");
+
+    extractionLoading.style.display = "none";
+
+    // Strip markdown code fences if present
+    var jsonStr = content.trim();
+    var match = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (match) { jsonStr = match[1].trim(); }
+
+    var parsed = null;
+    try {
+      var arrStart = jsonStr.indexOf("[");
+      var arrEnd = jsonStr.lastIndexOf("]");
+      if (arrStart !== -1 && arrEnd !== -1) {
+        parsed = JSON.parse(jsonStr.substring(arrStart, arrEnd + 1));
+      }
+    } catch(err) { parsed = null; }
+
+    if (!parsed || !Array.isArray(parsed) || parsed.length === 0) {
+      entryList.innerHTML =
+        '<div class="empty-state">' +
+          '<i class="fas fa-triangle-exclamation" style="color:var(--danger);"></i>' +
+          '<p style="color:var(--danger); font-weight:600;">No entries extracted.</p>' +
+          '<p style="font-size:13px; margin-top:4px;">Try a different model or check photo quality.</p>' +
+        '</div>';
+      reviewActions.style.display = "flex";
+      return;
+    }
+
+    state.tasks = parsed;
+
+    // Photo strip
+    if (dataUrls && dataUrls.length > 0) {
+      photoStrip.innerHTML = "";
+      dataUrls.forEach(function(url) {
+        var thumb = document.createElement("div");
+        thumb.className = "photo-strip-thumb";
+        var img = document.createElement("img");
+        img.src = url;
+        img.alt = "Namecard";
+        thumb.appendChild(img);
+        thumb.addEventListener("click", function() { openLightbox(url); });
+        photoStrip.appendChild(thumb);
+      });
+      photoStrip.style.display = "flex";
+    }
+
+    // Update title
+    var count = parsed.length;
+    reviewTitle.textContent = count + " namecard" + (count !== 1 ? "s" : "") + " extracted";
+    reviewDesc.textContent = "Review the information below. Tap a thumbnail above to zoom.";
+
+    renderEntries();
+    reviewActions.style.display = "flex";
+    showToast("Extraction complete!", "success");
+  }
+
+  function escapeHtml(s) {
+    var d = document.createElement("div");
+    d.textContent = s || "";
+    return d.innerHTML;
+  }
+
+  function renderEntries() {
+    var entryList = $id("entryList");
+    entryList.innerHTML = "";
+
+    if (!state.tasks || state.tasks.length === 0) {
+      entryList.innerHTML = '<div class="empty-state"><i class="fas fa-address-card"></i><p>No entries to show.</p></div>';
+      return;
+    }
+
+    // Field display order (known fields shown first, extras appended)
+    var KNOWN_FIELDS = ["name", "title", "company", "email", "phone", "mobile", "fax", "address", "website", "linkedin", "wechat", "line"];
+    var FIELD_LABELS = {
+      name: "Name", title: "Title", company: "Company",
+      email: "Email", phone: "Phone", mobile: "Mobile", fax: "Fax",
+      address: "Address", website: "Website", linkedin: "LinkedIn",
+      wechat: "WeChat", line: "LINE"
+    };
+
+    state.tasks.forEach(function(entry, idx) {
+      var card = document.createElement("div");
+      card.className = "entry-card";
+      card.style.animationDelay = (idx * 0.06) + "s";
+
+      var nameVal = entry.name || entry["名前"] || entry["姓名"] || ("Entry " + (idx + 1));
+      var titleHtml =
+        '<div class="entry-card-title">' +
+          '<span class="entry-num">' + (idx + 1) + '</span>' +
+          escapeHtml(String(nameVal)) +
+        '</div>';
+
+      var fieldsHtml = "";
+
+      // Render known fields first (in order)
+      KNOWN_FIELDS.forEach(function(key) {
+        if (entry[key] !== undefined && entry[key] !== null && entry[key] !== "") {
+          fieldsHtml +=
+            '<div class="entry-field">' +
+              '<div class="entry-field-key">' + escapeHtml(FIELD_LABELS[key] || key) + '</div>' +
+              '<div class="entry-field-val">' + escapeHtml(String(entry[key])) + '</div>' +
+            '</div>';
+        }
+      });
+
+      // Render any extra fields not in KNOWN_FIELDS
+      Object.keys(entry).forEach(function(key) {
+        if (KNOWN_FIELDS.indexOf(key) === -1 && key !== "name" && entry[key] !== undefined && entry[key] !== null && entry[key] !== "") {
+          fieldsHtml +=
+            '<div class="entry-field">' +
+              '<div class="entry-field-key">' + escapeHtml(key) + '</div>' +
+              '<div class="entry-field-val">' + escapeHtml(String(entry[key])) + '</div>' +
+            '</div>';
+        }
+      });
+
+      card.innerHTML = titleHtml + fieldsHtml;
+      entryList.appendChild(card);
+    });
+  }
+
+  // ========== REVIEW ACTIONS ==========
+  $id("backToCaptureBtn").addEventListener("click", function() {
+    updateStepper(2);
+    showSection("upload");
+  });
+
+  $id("copyResultsBtn").addEventListener("click", function() {
+    if (!state.tasks || state.tasks.length === 0) { return; }
+    navigator.clipboard.writeText(JSON.stringify(state.tasks, null, 2)).then(function() {
+      showToast("Results copied to clipboard!", "success");
+    }).catch(function(e) { showToast("Copy failed: " + e.message, "error"); });
+  });
+
+  $id("captureNewBtn").addEventListener("click", function() {
+    // Revoke all object URLs
+    selectedFiles.forEach(function(item) {
+      if (item.previewUrl) { URL.revokeObjectURL(item.previewUrl); }
+    });
+    selectedFiles = [];
+    state.tasks = [];
+    renderPhotoGrid();
+    updatePhotoCounter();
+    $id("extraInstruction").value = "";
+    $id("entryList").innerHTML = "";
+    $id("photoStrip").style.display = "none";
+    $id("reviewActions").style.display = "none";
+    updateStepper(2);
+    showSection("upload");
+  });
+
+  // ========== BOOT ==========
+  initPinState();
+
+})();
+</script>
+</body>
+</html>
