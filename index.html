@@ -1912,28 +1912,31 @@
       btn.textContent = "Processing…";
 
       croppedBlobs = [];
+      var OUTPUT_SIZE = 1200; // render at 1200px so compressImageBlob downscales to 900 instead of upscaling
       for (var i = 0; i < selectedFiles.length; i++) {
         var s = cropStates[i];
         var canvas = document.createElement("canvas");
-        canvas.width = CROP_SIZE;
-        canvas.height = CROP_SIZE;
+        canvas.width = OUTPUT_SIZE;
+        canvas.height = OUTPUT_SIZE;
         var ctx = canvas.getContext("2d");
         var imgEl = new Image();
         await new Promise(function(resolve) {
           imgEl.onload = resolve;
           imgEl.src = selectedFiles[i].previewUrl || URL.createObjectURL(selectedFiles[i].file);
         });
+        var upscale = OUTPUT_SIZE / CROP_SIZE;
         if (s) {
-          ctx.drawImage(imgEl, s.offsetX, s.offsetY,
-                        imgEl.naturalWidth * s.scale, imgEl.naturalHeight * s.scale);
+          ctx.drawImage(imgEl, s.offsetX * upscale, s.offsetY * upscale,
+                        imgEl.naturalWidth * s.scale * upscale, imgEl.naturalHeight * s.scale * upscale);
         } else {
           var scale = Math.max(CROP_SIZE / imgEl.naturalWidth, CROP_SIZE / imgEl.naturalHeight);
           var ox = (CROP_SIZE - imgEl.naturalWidth * scale) / 2;
           var oy = (CROP_SIZE - imgEl.naturalHeight * scale) / 2;
-          ctx.drawImage(imgEl, ox, oy, imgEl.naturalWidth * scale, imgEl.naturalHeight * scale);
+          ctx.drawImage(imgEl, ox * upscale, oy * upscale,
+                        imgEl.naturalWidth * scale * upscale, imgEl.naturalHeight * scale * upscale);
         }
         await new Promise(function(resolve) {
-          canvas.toBlob(function(blob) { croppedBlobs.push(blob); resolve(); }, "image/jpeg", 0.92);
+          canvas.toBlob(function(blob) { croppedBlobs.push(blob); resolve(); }, "image/jpeg", 0.95);
         });
       }
 
