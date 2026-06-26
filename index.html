@@ -298,31 +298,35 @@
   }
   .entry-field {
     display: flex; align-items: flex-start; gap: 8px; font-size: 13px;
-    line-height: 1.7; color: var(--text-secondary); margin-bottom: 4px;
+    line-height: 1.7; color: var(--text-secondary); margin-bottom: 10px;
   }
   .entry-field-copy {
-    width: 22px; height: 22px; flex-shrink: 0; margin-top: 1px;
+    width: 28px; height: 28px; flex-shrink: 0; margin-top: 2px;
     display: flex; align-items: center; justify-content: center;
     background: none; border: none; cursor: pointer;
-    color: var(--text-tertiary); border-radius: 4px;
-    transition: var(--transition); font-size: 11px;
+    color: var(--text-tertiary); border-radius: 6px;
+    transition: var(--transition); font-size: 14px;
   }
   .entry-field-copy:hover { color: var(--accent); background: var(--accent-light); }
   .entry-field-key {
-    min-width: 80px; font-weight: 600; color: var(--text-tertiary);
+    min-width: 82px; font-weight: 600; color: var(--text-tertiary);
     text-transform: uppercase; letter-spacing: 0.04em; font-size: 11px;
-    padding-top: 5px; flex-shrink: 0;
+    padding-top: 6px; flex-shrink: 0;
+    background: none; border: none; cursor: pointer;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    text-align: left; transition: var(--transition);
   }
+  .entry-field-key:hover { color: var(--accent); }
   .entry-field-input {
     flex: 1; font-family: 'Bricolage Grotesque', sans-serif;
     font-size: 13px; color: var(--text-primary);
     background: var(--bg-secondary); border: 1px solid transparent;
-    border-radius: 4px; padding: 3px 7px; outline: none;
+    border-radius: 4px; padding: 4px 8px; outline: none;
     transition: var(--transition); line-height: 1.5; width: 100%;
   }
   .entry-field-input:hover { border-color: var(--border-strong); }
   .entry-field-input:focus { border-color: var(--accent); background: var(--bg-card); box-shadow: 0 0 0 2px var(--accent-light); }
-  textarea.entry-field-input { resize: vertical; min-height: 60px; }
+  textarea.entry-field-input { resize: vertical; min-height: 64px; }
   .entry-num {
     display: inline-flex; align-items: center; justify-content: center;
     width: 22px; height: 22px; border-radius: 50%;
@@ -1427,7 +1431,7 @@
     return d.innerHTML;
   }
 
-  var KNOWN_FIELDS = ["last_name", "first_name", "title", "company", "department", "mobile", "direct_phone", "office_phone", "email", "note"];
+  var KNOWN_FIELDS = ["last_name", "first_name", "mobile", "direct_phone", "office_phone", "email", "company", "department", "title", "note"];
   var FIELD_LABELS = {
     last_name: "Last Name", first_name: "First Name", title: "Title",
     company: "Company", department: "Department",
@@ -1465,12 +1469,8 @@
         var row = document.createElement("div");
         row.className = "entry-field";
 
-        // Copy button (left)
-        var copyBtn = document.createElement("button");
-        copyBtn.className = "entry-field-copy";
-        copyBtn.title = "Copy " + (FIELD_LABELS[key] || key);
-        copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
-        copyBtn.addEventListener("click", function() {
+        // Shared copy action
+        function doCopy() {
           var currentVal = isNote
             ? row.querySelector("textarea").value
             : row.querySelector("input").value;
@@ -1478,17 +1478,28 @@
           navigator.clipboard.writeText(currentVal).then(function() {
             copyBtn.innerHTML = '<i class="fas fa-check"></i>';
             copyBtn.style.color = "var(--success)";
+            label.style.color = "var(--success)";
             setTimeout(function() {
               copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
               copyBtn.style.color = "";
+              label.style.color = "";
             }, 1500);
           }).catch(function(e) { showToast("Copy failed: " + e.message, "error"); });
-        });
+        }
 
-        // Label
-        var label = document.createElement("div");
+        // Copy button (left)
+        var copyBtn = document.createElement("button");
+        copyBtn.className = "entry-field-copy";
+        copyBtn.title = "Copy " + (FIELD_LABELS[key] || key);
+        copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
+        copyBtn.addEventListener("click", doCopy);
+
+        // Label (also clickable to copy)
+        var label = document.createElement("button");
         label.className = "entry-field-key";
         label.textContent = FIELD_LABELS[key] || key;
+        label.title = "Copy " + (FIELD_LABELS[key] || key);
+        label.addEventListener("click", doCopy);
 
         // Input or textarea
         var input;
@@ -1529,19 +1540,24 @@
         copyBtn.className = "entry-field-copy";
         copyBtn.title = "Copy " + key;
         copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
-        copyBtn.addEventListener("click", function() {
+
+        var label = document.createElement("button");
+        label.className = "entry-field-key";
+        label.textContent = key;
+        label.title = "Copy " + key;
+
+        function doExtraCopy() {
           var currentVal = row.querySelector("input").value;
           if (!currentVal) { return; }
           navigator.clipboard.writeText(currentVal).then(function() {
             copyBtn.innerHTML = '<i class="fas fa-check"></i>';
             copyBtn.style.color = "var(--success)";
-            setTimeout(function() { copyBtn.innerHTML = '<i class="fas fa-copy"></i>'; copyBtn.style.color = ""; }, 1500);
+            label.style.color = "var(--success)";
+            setTimeout(function() { copyBtn.innerHTML = '<i class="fas fa-copy"></i>'; copyBtn.style.color = ""; label.style.color = ""; }, 1500);
           }).catch(function(e) { showToast("Copy failed: " + e.message, "error"); });
-        });
-
-        var label = document.createElement("div");
-        label.className = "entry-field-key";
-        label.textContent = key;
+        }
+        copyBtn.addEventListener("click", doExtraCopy);
+        label.addEventListener("click", doExtraCopy);
 
         var input = document.createElement("input");
         input.type = "text";
