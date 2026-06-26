@@ -297,11 +297,15 @@
     border-bottom: 1px solid var(--border);
   }
   .entry-field {
-    display: flex; align-items: flex-start; gap: 8px; font-size: 13px;
+    display: flex; align-items: flex-start; gap: 10px; font-size: 13px;
     line-height: 1.7; color: var(--text-secondary); margin-bottom: 10px;
   }
+  .entry-field-left {
+    display: flex; align-items: center; gap: 4px;
+    flex-shrink: 0; padding-top: 3px;
+  }
   .entry-field-copy {
-    width: 28px; height: 28px; flex-shrink: 0; margin-top: 2px;
+    width: 28px; height: 28px; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
     background: none; border: none; cursor: pointer;
     color: var(--text-tertiary); border-radius: 6px;
@@ -309,12 +313,11 @@
   }
   .entry-field-copy:hover { color: var(--accent); background: var(--accent-light); }
   .entry-field-key {
-    min-width: 82px; font-weight: 600; color: var(--text-tertiary);
+    width: 76px; font-weight: 600; color: var(--text-tertiary);
     text-transform: uppercase; letter-spacing: 0.04em; font-size: 11px;
-    padding-top: 6px; flex-shrink: 0;
     background: none; border: none; cursor: pointer;
     font-family: 'Bricolage Grotesque', sans-serif;
-    text-align: left; transition: var(--transition);
+    text-align: left; transition: color var(--transition);
   }
   .entry-field-key:hover { color: var(--accent); }
   .entry-field-input {
@@ -1469,6 +1472,18 @@
         var row = document.createElement("div");
         row.className = "entry-field";
 
+        // Copy button (left)
+        var copyBtn = document.createElement("button");
+        copyBtn.className = "entry-field-copy";
+        copyBtn.title = "Copy " + (FIELD_LABELS[key] || key);
+        copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
+
+        // Label (also clickable to copy)
+        var label = document.createElement("button");
+        label.className = "entry-field-key";
+        label.textContent = FIELD_LABELS[key] || key;
+        label.title = "Copy " + (FIELD_LABELS[key] || key);
+
         // Shared copy action
         function doCopy() {
           var currentVal = isNote
@@ -1478,27 +1493,14 @@
           navigator.clipboard.writeText(currentVal).then(function() {
             copyBtn.innerHTML = '<i class="fas fa-check"></i>';
             copyBtn.style.color = "var(--success)";
-            label.style.color = "var(--success)";
             setTimeout(function() {
               copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
               copyBtn.style.color = "";
-              label.style.color = "";
             }, 1500);
           }).catch(function(e) { showToast("Copy failed: " + e.message, "error"); });
         }
 
-        // Copy button (left)
-        var copyBtn = document.createElement("button");
-        copyBtn.className = "entry-field-copy";
-        copyBtn.title = "Copy " + (FIELD_LABELS[key] || key);
-        copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
         copyBtn.addEventListener("click", doCopy);
-
-        // Label (also clickable to copy)
-        var label = document.createElement("button");
-        label.className = "entry-field-key";
-        label.textContent = FIELD_LABELS[key] || key;
-        label.title = "Copy " + (FIELD_LABELS[key] || key);
         label.addEventListener("click", doCopy);
 
         // Input or textarea
@@ -1521,8 +1523,11 @@
           }
         });
 
-        row.appendChild(copyBtn);
-        row.appendChild(label);
+        var leftGroup = document.createElement("div");
+        leftGroup.className = "entry-field-left";
+        leftGroup.appendChild(copyBtn);
+        leftGroup.appendChild(label);
+        row.appendChild(leftGroup);
         row.appendChild(input);
         card.appendChild(row);
       });
@@ -1552,8 +1557,7 @@
           navigator.clipboard.writeText(currentVal).then(function() {
             copyBtn.innerHTML = '<i class="fas fa-check"></i>';
             copyBtn.style.color = "var(--success)";
-            label.style.color = "var(--success)";
-            setTimeout(function() { copyBtn.innerHTML = '<i class="fas fa-copy"></i>'; copyBtn.style.color = ""; label.style.color = ""; }, 1500);
+            setTimeout(function() { copyBtn.innerHTML = '<i class="fas fa-copy"></i>'; copyBtn.style.color = ""; }, 1500);
           }).catch(function(e) { showToast("Copy failed: " + e.message, "error"); });
         }
         copyBtn.addEventListener("click", doExtraCopy);
@@ -1565,8 +1569,11 @@
         input.value = val;
         input.addEventListener("input", function() { entry[key] = input.value; });
 
-        row.appendChild(copyBtn);
-        row.appendChild(label);
+        var leftGroup2 = document.createElement("div");
+        leftGroup2.className = "entry-field-left";
+        leftGroup2.appendChild(copyBtn);
+        leftGroup2.appendChild(label);
+        row.appendChild(leftGroup2);
         row.appendChild(input);
         card.appendChild(row);
       });
