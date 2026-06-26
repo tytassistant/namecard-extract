@@ -1400,6 +1400,16 @@
       return;
     }
 
+    function toNameCase(str) {
+      if (!str) { return str; }
+      return str.replace(/[^\s-]+/g, function(w) {
+        return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+      });
+    }
+    parsed.forEach(function(entry) {
+      if (entry.last_name)  { entry.last_name  = toNameCase(entry.last_name);  }
+      if (entry.first_name) { entry.first_name = toNameCase(entry.first_name); }
+    });
     state.tasks = parsed;
 
     // Photo strip
