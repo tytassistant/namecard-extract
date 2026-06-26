@@ -1811,19 +1811,143 @@
   var croppedBlobs = [];     // final square blobs, populated on Confirm
 
   var CROP_SIZE = 0; // resolved at open time from rendered container
+  var cropModalEventsReady = false;
 
   function openCropModal() {
     var container = $id("cropContainer");
     CROP_SIZE = container.offsetWidth || 360;
-    var total = selectedFiles.length;
     cropCurrentIdx = 0;
     croppedBlobs = [];
+    cropStates = selectedFiles.map(function() { return null; });
 
-    // Initialise states
-    cropStates = selectedFiles.map(function() { return null; }); // null = not yet initialised
+    if (!cropModalEventsReady) { initCropModalEvents(); cropModalEventsReady = true; }
 
     $id("cropModal").classList.add("open");
     loadCropPhoto(0);
+  }
+
+  function initCropModalEvents() {
+    var container = $id("cropContainer");
+    var dragging = false;
+    var lastX = 0, lastY = 0;
+
+    container.addEventListener("mousedown", function(e) {
+      dragging = true;
+      lastX = e.clientX; lastY = e.clientY;
+      container.style.cursor = "grabbing";
+      e.preventDefault();
+    });
+    window.addEventListener("mousemove", function(e) {
+      if (!dragging) return;
+      var s = cropStates[cropCurrentIdx];
+      if (!s) return;
+      s.offsetX += e.clientX - lastX;
+      s.offsetY += e.clientY - lastY;
+      lastX = e.clientX; lastY = e.clientY;
+      applyCropTransform($id("cropImg"), s);
+    });
+    window.addEventListener("mouseup", function() {
+      dragging = false;
+      container.style.cursor = "grab";
+    });
+
+    var lastTouches = null;
+    container.addEventListener("touchstart", function(e) {
+      lastTouches = e.touches;
+      e.preventDefault();
+    }, { passive: false });
+    container.addEventListener("touchmove", function(e) {
+      var s = cropStates[cropCurrentIdx];
+      if (!s || !lastTouches) return;
+      e.preventDefault();
+      if (e.touches.length === 1 && lastTouches.length === 1) {
+        s.offsetX += e.touches[0].clientX - lastTouches[0].clientX;
+        s.offsetY += e.touches[0].clientY - lastTouches[0].clientY;
+      } else if (e.touches.length === 2 && lastTouches.length === 2) {
+        var prevDist = Math.hypot(lastTouches[0].clientX - lastTouches[1].clientX,
+                                  lastTouches[0].clientY - lastTouches[1].clientY);
+        var newDist  = Math.hypot(e.touches[0].clientX - e.touches[1].clientX,
+                                  e.touches[0].clientY - e.touches[1].clientY);
+        if (prevDist > 0) {
+          var ratio = newDist / prevDist;
+          var cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+          var cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+          var rect = container.getBoundingClientRect();
+          var px = cx - rect.left - s.offsetX;
+          var py = cy - rect.top  - s.offsetY;
+          s.scale = Math.max(0.1, s.scale * ratio);
+          s.offsetX = cx - rect.left - px * ratio;
+          s.offsetY = cy - rect.top  - py * ratio;
+        }
+      }
+      lastTouches = e.touches;
+      applyCropTransform($id("cropImg"), s);
+    }, { passive: false });
+    container.addEventListener("touchend", function(e) { lastTouches = e.touches; });
+
+    container.addEventListener("wheel", function(e) {
+      var s = cropStates[cropCurrentIdx];
+      if (!s) return;
+      e.preventDefault();
+      var rect = container.getBoundingClientRect();
+      var px = e.clientX - rect.left - s.offsetX;
+      var py = e.clientY - rect.top  - s.offsetY;
+      var factor = e.deltaY < 0 ? 1.1 : 0.9;
+      s.scale = Math.max(0.1, s.scale * factor);
+      s.offsetX = e.clientX - rect.left - px * factor;
+      s.offsetY = e.clientY - rect.top  - py * factor;
+      applyCropTransform($id("cropImg"), s);
+    }, { passive: false });
+
+    $id("cropBackBtn").addEventListener("click", function() {
+      if (cropCurrentIdx > 0) { cropCurrentIdx--; loadCropPhoto(cropCurrentIdx); }
+    });
+    $id("cropNextBtn").addEventListener("click", function() {
+      if (cropCurrentIdx < selectedFiles.length - 1) { cropCurrentIdx++; loadCropPhoto(cropCurrentIdx); }
+    });
+
+    $id("cropConfirmBtn").addEventListener("click", async function() {
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = "Processing…";
+
+      croppedBlobs = [];
+      for (var i = 0; i < selectedFiles.length; i++) {
+        var s = cropStates[i];
+        var canvas = document.createElement("canvas");
+        canvas.width = CROP_SIZE;
+        canvas.height = CROP_SIZE;
+        var ctx = canvas.getContext("2d");
+        var imgEl = new Image();
+        await new Promise(function(resolve) {
+          imgEl.onload = resolve;
+          imgEl.src = selectedFiles[i].previewUrl || URL.createObjectURL(selectedFiles[i].file);
+        });
+        if (s) {
+          ctx.drawImage(imgEl, s.offsetX, s.offsetY,
+                        imgEl.naturalWidth * s.scale, imgEl.naturalHeight * s.scale);
+        } else {
+          var scale = Math.max(CROP_SIZE / imgEl.naturalWidth, CROP_SIZE / imgEl.naturalHeight);
+          var ox = (CROP_SIZE - imgEl.naturalWidth * scale) / 2;
+          var oy = (CROP_SIZE - imgEl.naturalHeight * scale) / 2;
+          ctx.drawImage(imgEl, ox, oy, imgEl.naturalWidth * scale, imgEl.naturalHeight * scale);
+        }
+        await new Promise(function(resolve) {
+          canvas.toBlob(function(blob) { croppedBlobs.push(blob); resolve(); }, "image/jpeg", 0.92);
+        });
+      }
+
+      btn.disabled = false;
+      btn.textContent = "Confirm all";
+      $id("cropModal").classList.remove("open");
+
+      updateStepper(3);
+      showSection("review");
+      $id("entryList").innerHTML = "";
+      $id("reviewActions").style.display = "none";
+      $id("photoStrip").style.display = "none";
+      await buildAndExtract();
+    });
   }
 
   function loadCropPhoto(idx) {
@@ -1850,134 +1974,6 @@
   function applyCropTransform(img, state) {
     img.style.transform = "translate(" + state.offsetX + "px, " + state.offsetY + "px) scale(" + state.scale + ")";
   }
-
-  // Drag
-  (function() {
-    var container = $id("cropContainer");
-    var dragging = false;
-    var lastX = 0, lastY = 0;
-
-    container.addEventListener("mousedown", function(e) {
-      dragging = true;
-      lastX = e.clientX; lastY = e.clientY;
-      container.style.cursor = "grabbing";
-      e.preventDefault();
-    });
-    window.addEventListener("mousemove", function(e) {
-      if (!dragging) return;
-      var s = cropStates[cropCurrentIdx];
-      if (!s) return;
-      s.offsetX += e.clientX - lastX;
-      s.offsetY += e.clientY - lastY;
-      lastX = e.clientX; lastY = e.clientY;
-      applyCropTransform($id("cropImg"), s);
-    });
-    window.addEventListener("mouseup", function() {
-      dragging = false;
-      container.style.cursor = "grab";
-    });
-
-    // Touch drag + pinch
-    var lastTouches = null;
-    container.addEventListener("touchstart", function(e) {
-      lastTouches = e.touches;
-      e.preventDefault();
-    }, { passive: false });
-    container.addEventListener("touchmove", function(e) {
-      var s = cropStates[cropCurrentIdx];
-      if (!s || !lastTouches) return;
-      e.preventDefault();
-      if (e.touches.length === 1 && lastTouches.length === 1) {
-        s.offsetX += e.touches[0].clientX - lastTouches[0].clientX;
-        s.offsetY += e.touches[0].clientY - lastTouches[0].clientY;
-      } else if (e.touches.length === 2 && lastTouches.length === 2) {
-        var prevDist = Math.hypot(lastTouches[0].clientX - lastTouches[1].clientX,
-                                  lastTouches[0].clientY - lastTouches[1].clientY);
-        var newDist  = Math.hypot(e.touches[0].clientX - e.touches[1].clientX,
-                                  e.touches[0].clientY - e.touches[1].clientY);
-        if (prevDist > 0) {
-          var ratio = newDist / prevDist;
-          var cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-          var cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-          var rect = $id("cropContainer").getBoundingClientRect();
-          var px = cx - rect.left - s.offsetX;
-          var py = cy - rect.top  - s.offsetY;
-          s.scale = Math.max(0.1, s.scale * ratio);
-          s.offsetX = cx - rect.left - px * ratio;
-          s.offsetY = cy - rect.top  - py * ratio;
-        }
-      }
-      lastTouches = e.touches;
-      applyCropTransform($id("cropImg"), s);
-    }, { passive: false });
-    container.addEventListener("touchend", function(e) { lastTouches = e.touches; });
-
-    // Scroll wheel zoom
-    container.addEventListener("wheel", function(e) {
-      var s = cropStates[cropCurrentIdx];
-      if (!s) return;
-      e.preventDefault();
-      var rect = container.getBoundingClientRect();
-      var px = e.clientX - rect.left - s.offsetX;
-      var py = e.clientY - rect.top  - s.offsetY;
-      var factor = e.deltaY < 0 ? 1.1 : 0.9;
-      s.scale = Math.max(0.1, s.scale * factor);
-      s.offsetX = e.clientX - rect.left - px * factor;
-      s.offsetY = e.clientY - rect.top  - py * factor;
-      applyCropTransform($id("cropImg"), s);
-    }, { passive: false });
-  })();
-
-  $id("cropBackBtn").addEventListener("click", function() {
-    if (cropCurrentIdx > 0) { cropCurrentIdx--; loadCropPhoto(cropCurrentIdx); }
-  });
-  $id("cropNextBtn").addEventListener("click", function() {
-    if (cropCurrentIdx < selectedFiles.length - 1) { cropCurrentIdx++; loadCropPhoto(cropCurrentIdx); }
-  });
-
-  $id("cropConfirmBtn").addEventListener("click", async function() {
-    var btn = this;
-    btn.disabled = true;
-    btn.textContent = "Processing…";
-
-    croppedBlobs = [];
-    for (var i = 0; i < selectedFiles.length; i++) {
-      var s = cropStates[i];
-      var canvas = document.createElement("canvas");
-      canvas.width = CROP_SIZE;
-      canvas.height = CROP_SIZE;
-      var ctx = canvas.getContext("2d");
-      var imgEl = new Image();
-      await new Promise(function(resolve) {
-        imgEl.onload = resolve;
-        imgEl.src = selectedFiles[i].previewUrl || URL.createObjectURL(selectedFiles[i].file);
-      });
-      if (s) {
-        ctx.drawImage(imgEl, s.offsetX, s.offsetY,
-                      imgEl.naturalWidth * s.scale, imgEl.naturalHeight * s.scale);
-      } else {
-        // fallback: cover-fill centred
-        var scale = Math.max(CROP_SIZE / imgEl.naturalWidth, CROP_SIZE / imgEl.naturalHeight);
-        var ox = (CROP_SIZE - imgEl.naturalWidth * scale) / 2;
-        var oy = (CROP_SIZE - imgEl.naturalHeight * scale) / 2;
-        ctx.drawImage(imgEl, ox, oy, imgEl.naturalWidth * scale, imgEl.naturalHeight * scale);
-      }
-      await new Promise(function(resolve) {
-        canvas.toBlob(function(blob) { croppedBlobs.push(blob); resolve(); }, "image/jpeg", 0.92);
-      });
-    }
-
-    btn.disabled = false;
-    btn.textContent = "Confirm all";
-    $id("cropModal").classList.remove("open");
-
-    updateStepper(3);
-    showSection("review");
-    $id("entryList").innerHTML = "";
-    $id("reviewActions").style.display = "none";
-    $id("photoStrip").style.display = "none";
-    await buildAndExtract();
-  });
 
   extractBtn.addEventListener("click", function() {
     if (selectedFiles.length === 0) {
