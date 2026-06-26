@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Namecard Extract</title>
+<title>Name Card Extract</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
@@ -570,9 +570,8 @@
   <div class="header">
     <div class="header-logo">
       <div class="header-logo-icon"><i class="fas fa-address-card"></i></div>
-      <h1>Namecard Extract</h1>
+      <h1>Name Card Extract</h1>
     </div>
-    <p>AI-powered namecard information extraction</p>
   </div>
 
   <!-- Stepper -->
@@ -607,7 +606,7 @@
 
     <div class="card" id="msalCard" style="display:none;">
       <div class="card-title">Connect to Microsoft</div>
-      <div class="card-desc">Sign in with your Microsoft account to sync extracted namecards to Microsoft Contacts. Your session stays active for up to 90&nbsp;days.</div>
+      <div class="card-desc">Sign in with your Microsoft account to sync extracted name cards to Microsoft Contacts. Your session stays active for up to 90&nbsp;days.</div>
 
       <button class="instructions-toggle" id="instrToggle" type="button">
         <i class="fas fa-chevron-right"></i> First-time setup (Azure AD app)
@@ -615,7 +614,7 @@
       <div class="instructions-body" id="instrBody">
         <ol>
           <li>Go to <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" rel="noopener">Azure AD &gt; App registrations</a></li>
-          <li>Click <strong>New registration</strong>, name it (e.g. &ldquo;Namecard Extract&rdquo;)</li>
+          <li>Click <strong>New registration</strong>, name it (e.g. &ldquo;Name Card Extract&rdquo;)</li>
           <li>Under <strong>Supported account types</strong>, choose <em>Accounts in any org &amp; personal</em></li>
           <li>Under <strong>Redirect URI</strong>, select <strong>Single-page application (SPA)</strong> and enter this page&rsquo;s URL</li>
           <li>Click <strong>Register</strong>, then copy the <strong>Application (client) ID</strong></li>
@@ -644,7 +643,7 @@
     <!-- Google auth card -->
     <div class="card" id="googleCard" style="display:none;">
       <div class="card-title">Connect to Google</div>
-      <div class="card-desc">Sign in with your Google account to sync extracted namecards to Google Contacts. Note: the session token lasts 1&nbsp;hour — you'll need to sign in again each visit.</div>
+      <div class="card-desc">Sign in with your Google account to sync extracted name cards to Google Contacts. Note: the session token lasts 1&nbsp;hour — you'll need to sign in again each visit.</div>
 
       <button class="instructions-toggle" id="gInstrToggle" type="button">
         <i class="fas fa-chevron-right"></i> First-time setup (Google Cloud Console)
@@ -692,7 +691,7 @@
 
       <div id="pinStateA">
         <div class="card-desc" id="pinStateADesc">
-          Used for AI-powered namecard extraction. Get your key from <a href="https://poe.com/api_key" target="_blank" rel="noopener"><strong>poe.com/api_key</strong></a>.
+          Used for name card extraction. Get your key from <a href="https://poe.com/api_key" target="_blank" rel="noopener"><strong>poe.com/api_key</strong></a>.
         </div>
         <div class="field">
           <div class="pin-field-wrap">
@@ -774,7 +773,7 @@
           Extra instruction <span style="font-weight:400; text-transform:none; letter-spacing:0;">(optional)</span>
         </label>
         <div class="smart-input-box">
-          <textarea id="extraInstruction" placeholder="e.g. focus on Japanese namecards, extract katakana readings" rows="2"></textarea>
+          <textarea id="extraInstruction" placeholder="e.g. focus on Japanese name cards, extract katakana readings" rows="2"></textarea>
         </div>
       </div>
 
@@ -794,7 +793,7 @@
       </div>
 
       <!-- 4. Counter -->
-      <div id="photoCounter" style="font-size:13px; color:var(--text-secondary);">0 / 30 namecards selected</div>
+      <div id="photoCounter" style="font-size:13px; color:var(--text-secondary);">0 / 30 name cards selected</div>
 
       <!-- 5. Photo grid -->
       <div class="photo-grid" id="photoGrid"></div>
@@ -810,17 +809,11 @@
   <!-- ======= SECTION 3: REVIEW ======= -->
   <div class="section" id="section-review">
     <div class="card">
-      <div class="card-title" id="reviewTitle">Extracted namecards</div>
+      <div class="card-title" id="reviewTitle">Extracted name cards</div>
       <div class="card-desc" id="reviewDesc">Review the extracted information below.</div>
 
       <!-- Photo thumbnail strip -->
       <div class="photo-strip" id="photoStrip" style="display:none;"></div>
-
-      <!-- Loading -->
-      <div id="extractionLoading" style="display:none;">
-        <div class="spinner"></div>
-        <div class="loading-text animate-pulse">Extracting namecard information…</div>
-      </div>
 
       <!-- Results -->
       <div class="entry-list" id="entryList"></div>
@@ -853,7 +846,7 @@
 <div class="lightbox-overlay" id="lightboxOverlay">
   <button class="lightbox-close" id="lightboxClose" type="button"><i class="fas fa-xmark"></i></button>
   <div class="lightbox-img-wrap" id="lightboxWrap">
-    <img id="lightboxImg" alt="Namecard photo">
+    <img id="lightboxImg" alt="Name card photo">
   </div>
 </div>
 
@@ -883,7 +876,7 @@
     var container = document.querySelector(".app-container");
     if (container) {
       container.innerHTML =
-        '<div class="header"><div class="header-logo"><div class="header-logo-icon"><i class="fas fa-address-card"></i></div><h1>Namecard Extract</h1></div></div>' +
+        '<div class="header"><div class="header-logo"><div class="header-logo-icon"><i class="fas fa-address-card"></i></div><h1>Name Card Extract</h1></div></div>' +
         '<div class="card" style="text-align:center;">' +
           '<div style="font-size:48px; margin-bottom:16px; color:var(--accent);"><i class="fas fa-globe"></i></div>' +
           '<h2 style="font-size:20px; font-weight:700; margin-bottom:12px;">Browser storage required</h2>' +
@@ -1435,7 +1428,7 @@
       pinStateADesc.innerHTML = "Enter a new API key and set a new PIN.";
       pinStateACancel.style.display = "";
     } else {
-      pinStateADesc.innerHTML = 'Used for AI-powered namecard extraction. Get your key from <a href="https://poe.com/api_key" target="_blank" rel="noopener"><strong>poe.com/api_key</strong></a>.';
+      pinStateADesc.innerHTML = 'Used for name card extraction. Get your key from <a href="https://poe.com/api_key" target="_blank" rel="noopener"><strong>poe.com/api_key</strong></a>.';
       pinStateACancel.style.display = "none";
     }
   }
@@ -1625,7 +1618,7 @@
 
   // ========== IMAGE COMPRESSION ==========
   function compressImageBlob(file, targetWidth) {
-    targetWidth = targetWidth || 1800;
+    targetWidth = targetWidth || 900;
     return new Promise(function(resolve, reject) {
       if (file.type === "image/jpeg" && file.size <= 750000) { return resolve(file); }
       var url = URL.createObjectURL(file);
@@ -1667,7 +1660,7 @@
   // ========== PHOTO GRID ==========
   function updatePhotoCounter() {
     var count = selectedFiles.length;
-    photoCounter.textContent = count + " / " + MAX_PHOTOS + " namecards selected";
+    photoCounter.textContent = count + " / " + MAX_PHOTOS + " name cards selected";
     var atMax = count >= MAX_PHOTOS;
     photoInput.disabled = atMax;
     cameraInput.disabled = atMax;
@@ -1819,27 +1812,42 @@
     }
     updateStepper(3);
     showSection("review");
-
-    var extractionLoading = $id("extractionLoading");
-    var entryList = $id("entryList");
-    var reviewActions = $id("reviewActions");
-    var photoStrip = $id("photoStrip");
-
-    extractionLoading.style.display = "block";
-    entryList.innerHTML = "";
-    reviewActions.style.display = "none";
-    photoStrip.style.display = "none";
-
+    $id("entryList").innerHTML = "";
+    $id("reviewActions").style.display = "none";
+    $id("photoStrip").style.display = "none";
     await buildAndExtract();
   });
 
   async function buildAndExtract() {
-    var extractionLoading = $id("extractionLoading");
+    var progressModal = $id("syncProgressModal");
+    var progressMsg = $id("syncProgressMsg");
+    var elapsedEl = $id("syncElapsedCounter");
     var reviewActions = $id("reviewActions");
+    var syncMsBtn = $id("syncMsBtn");
+    var syncGoogleBtn = $id("syncGoogleBtn");
+    var total = selectedFiles.length;
+
+    progressMsg.textContent = "Preparing…";
+    elapsedEl.textContent = "0s";
+    progressModal.classList.add("open");
+    syncMsBtn.disabled = true;
+    syncGoogleBtn.disabled = true;
+
+    var startTime = Date.now();
+    var elapsedInterval = setInterval(function() {
+      elapsedEl.textContent = Math.floor((Date.now() - startTime) / 1000) + "s";
+    }, 1000);
+
+    function cleanup() {
+      clearInterval(elapsedInterval);
+      progressModal.classList.remove("open");
+      syncMsBtn.disabled = false;
+      syncGoogleBtn.disabled = false;
+    }
 
     var poeKey = getPoeApiKey();
     if (!poeKey) {
-      extractionLoading.style.display = "none";
+      cleanup();
       showToast("Poe API key missing. Please go back and log in.", "error");
       reviewActions.style.display = "flex";
       return;
@@ -1847,7 +1855,8 @@
 
     // Compress all photos
     var compressedFiles = [];
-    for (var i = 0; i < selectedFiles.length; i++) {
+    for (var i = 0; i < total; i++) {
+      progressMsg.textContent = "Compressing photo " + (i + 1) + " of " + total + "…";
       try {
         var compressed = await compressImageBlob(selectedFiles[i].file);
         compressedFiles.push(compressed);
@@ -1857,7 +1866,7 @@
     }
 
     if (compressedFiles.length === 0) {
-      extractionLoading.style.display = "none";
+      cleanup();
       showToast("No valid photos to process.", "error");
       reviewActions.style.display = "flex";
       return;
@@ -1878,13 +1887,13 @@
 
     // Build prompt
     var promptLines = [
-      "You are an expert at reading business namecards.",
+      "You are an expert at reading business name cards.",
       "",
       "Analyze each image in this message carefully. Return a JSON array with exactly one element per image, in the same order as the images.",
-      "- If the image contains a business namecard, return a JSON object with the extracted fields.",
-      "- If the image does NOT contain a namecard (e.g. a photo, screenshot, or blank page), return null for that position.",
+      "- If the image contains a business name card, return a JSON object with the extracted fields.",
+      "- If the image does NOT contain a name card (e.g. a photo, screenshot, or blank page), return null for that position.",
       "",
-      "## Output fields for namecard objects (use exactly these keys)",
+      "## Output fields for name card objects (use exactly these keys)",
       '- "last_name": family name / surname',
       '- "first_name": given name including middle name if present',
       '- "mobile": mobile / cell phone — look for labels M, C, Mobile, Cell, Mo',
@@ -1904,12 +1913,12 @@
       "",
       "## General rules",
       "- The array must have exactly the same number of elements as images sent — one per image, no more, no less.",
-      "- Use null (not an empty object) for any image that is not a namecard.",
+      "- Use null (not an empty object) for any image that is not a name card.",
       "- Omit any field that is not present or not readable on the card.",
       "- Do not translate any text.",
       "- Return ONLY a valid JSON array. No explanations, no markdown code blocks.",
       "",
-      "## Example (4 images, 3rd is not a namecard)",
+      "## Example (4 images, 3rd is not a name card)",
       "[",
       '  {"last_name":"Smith","first_name":"John","mobile":"+85298765432","office_phone":"+85221234567","email":"john@acme.com","company":"Acme Corp","title":"Sales Director"},',
       '  {"last_name":"Tanaka","first_name":"Taro","office_phone":"+81312345678","email":"tanaka@abc.co.jp","company":"ABC株式会社","title":"部長","note":"田中太郎 / ABC株式会社"},',
@@ -1931,6 +1940,8 @@
     dataUrls.forEach(function(url) {
       messageContent.push({ type: "image_url", image_url: { url: url } });
     });
+
+    progressMsg.textContent = "Extracting name cards…";
 
     try {
       var res = await fetch("https://api.poe.com/v1/chat/completions", {
@@ -1959,24 +1970,22 @@
       }
       if (!content) { throw new Error("Empty response from AI"); }
 
+      cleanup();
       processExtractionResult(content, dataUrls);
 
     } catch(err) {
-      extractionLoading.style.display = "none";
+      cleanup();
       showToast("Extraction failed: " + (err.message || String(err)), "error");
       reviewActions.style.display = "flex";
     }
   }
 
   function processExtractionResult(content, dataUrls) {
-    var extractionLoading = $id("extractionLoading");
     var entryList = $id("entryList");
     var reviewActions = $id("reviewActions");
     var reviewTitle = $id("reviewTitle");
     var reviewDesc = $id("reviewDesc");
     var photoStrip = $id("photoStrip");
-
-    extractionLoading.style.display = "none";
 
     // Strip markdown code fences if present
     var jsonStr = content.trim();
@@ -2043,7 +2052,7 @@
         thumb.className = "photo-strip-thumb";
         var img = document.createElement("img");
         img.src = url;
-        img.alt = "Namecard";
+        img.alt = "Name card";
         thumb.appendChild(img);
         thumb.addEventListener("click", function() { openLightbox(url); });
         photoStrip.appendChild(thumb);
@@ -2053,7 +2062,7 @@
 
     // Update title
     var count = parsed.length;
-    reviewTitle.textContent = count + " namecard" + (count !== 1 ? "s" : "") + " extracted";
+    reviewTitle.textContent = count + " name card" + (count !== 1 ? "s" : "") + " extracted";
     reviewDesc.textContent = "Review the information below. Tap a thumbnail above to zoom.";
 
     renderEntries();
