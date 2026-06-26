@@ -1531,6 +1531,7 @@
       '- "department": department and/or division',
       '- "title": job title',
       '- "note": if the name on the card is in a non-Latin script (Chinese, Japanese, Korean, etc.), put the original non-English name here; otherwise leave this field out entirely',
+      '- "photo_index": the 0-based index of the source image this namecard was extracted from (first image = 0, second image = 1, etc.) — always include this field',
       "",
       "## Phone number formatting rules",
       "1. Strip all spaces, hyphens (-), dots (.), parentheses ( ) from every phone number.",
@@ -1546,8 +1547,8 @@
       "",
       "## Example output",
       "[",
-      '  {"last_name":"Smith","first_name":"John","mobile":"+85298765432","office_phone":"+85221234567","email":"john@acme.com","company":"Acme Corp","title":"Sales Director"},',
-      '  {"last_name":"Tanaka","first_name":"Taro","office_phone":"+81312345678","email":"tanaka@abc.co.jp","company":"ABC株式会社","title":"部長","note":"田中太郎"}',
+      '  {"photo_index":0,"last_name":"Smith","first_name":"John","mobile":"+85298765432","office_phone":"+85221234567","email":"john@acme.com","company":"Acme Corp","title":"Sales Director"},',
+      '  {"photo_index":1,"last_name":"Tanaka","first_name":"Taro","office_phone":"+81312345678","email":"tanaka@abc.co.jp","company":"ABC株式会社","title":"部長","note":"田中太郎"}',
       "]"
     ];
 
@@ -1783,7 +1784,7 @@
 
       // Extra fields returned by LLM not in KNOWN_FIELDS
       Object.keys(entry).forEach(function(key) {
-        if (KNOWN_FIELDS.indexOf(key) !== -1) { return; }
+        if (KNOWN_FIELDS.indexOf(key) !== -1 || key === "photo_index") { return; }
         var val = (entry[key] !== undefined && entry[key] !== null) ? String(entry[key]) : "";
         if (val === "") { return; }
 
@@ -1990,8 +1991,6 @@
       syncBtn.disabled = false;
       return;
     }
-    var photosMatchEntries = state.photoDataUrls.length === state.tasks.length;
-
     function dataUrlToBuffer(dataUrl) {
       var base64 = dataUrl.split(",")[1];
       var binary = atob(base64);
@@ -2025,8 +2024,9 @@
         if (resp.ok) {
           var created = await resp.json();
           ok++;
-          // Upload photo if we have a 1:1 match between photos and entries
-          if (photosMatchEntries && state.photoDataUrls[i]) {
+          // Upload photo using photo_index returned by LLM
+          var photoIdx = (entry.photo_index !== undefined && entry.photo_index !== null) ? entry.photo_index : i;
+          if (state.photoDataUrls[photoIdx]) {
             try {
               await fetch("https://graph.microsoft.com/v1.0/me/contacts/" + created.id + "/photo/$value", {
                 method: "PUT",
