@@ -1518,9 +1518,11 @@
     var promptLines = [
       "You are an expert at reading business namecards.",
       "",
-      "Analyze each namecard image in this message carefully. Extract the contact information from each namecard and return the results as a JSON array — one object per namecard image, in the same order as the images.",
+      "Analyze each image in this message carefully. Return a JSON array with exactly one element per image, in the same order as the images.",
+      "- If the image contains a business namecard, return a JSON object with the extracted fields.",
+      "- If the image does NOT contain a namecard (e.g. a photo, screenshot, or blank page), return null for that position.",
       "",
-      "## Output fields (use exactly these keys)",
+      "## Output fields for namecard objects (use exactly these keys)",
       '- "last_name": family name / surname',
       '- "first_name": given name including middle name if present',
       '- "mobile": mobile / cell phone — look for labels M, C, Mobile, Cell, Mo',
@@ -1531,7 +1533,6 @@
       '- "department": department and/or division',
       '- "title": job title',
       '- "note": if the name on the card is in a non-Latin script (Chinese, Japanese, Korean, etc.), put the original non-English name here; otherwise leave this field out entirely',
-      '- "photo_index": the 0-based index of the source image this namecard was extracted from (first image = 0, second image = 1, etc.) — always include this field',
       "",
       "## Phone number formatting rules",
       "1. Strip all spaces, hyphens (-), dots (.), parentheses ( ) from every phone number.",
@@ -1540,15 +1541,18 @@
       "4. Example: '2123 4567' on a Hong Kong card → '+85221234567'",
       "",
       "## General rules",
-      "- Return one JSON object per namecard image.",
+      "- The array must have exactly the same number of elements as images sent — one per image, no more, no less.",
+      "- Use null (not an empty object) for any image that is not a namecard.",
       "- Omit any field that is not present or not readable on the card.",
       "- Do not translate any text.",
       "- Return ONLY a valid JSON array. No explanations, no markdown code blocks.",
       "",
-      "## Example output",
+      "## Example (4 images, 3rd is not a namecard)",
       "[",
-      '  {"photo_index":0,"last_name":"Smith","first_name":"John","mobile":"+85298765432","office_phone":"+85221234567","email":"john@acme.com","company":"Acme Corp","title":"Sales Director"},',
-      '  {"photo_index":1,"last_name":"Tanaka","first_name":"Taro","office_phone":"+81312345678","email":"tanaka@abc.co.jp","company":"ABC株式会社","title":"部長","note":"田中太郎"}',
+      '  {"last_name":"Smith","first_name":"John","mobile":"+85298765432","office_phone":"+85221234567","email":"john@acme.com","company":"Acme Corp","title":"Sales Director"},',
+      '  {"last_name":"Tanaka","first_name":"Taro","office_phone":"+81312345678","email":"tanaka@abc.co.jp","company":"ABC株式会社","title":"部長","note":"田中太郎"},',
+      "  null,",
+      '  {"last_name":"Lee","first_name":"David","mobile":"+85291234567","email":"david@xyz.com","company":"XYZ Ltd","title":"Manager"}',
       "]"
     ];
 
@@ -1626,7 +1630,7 @@
       }
     } catch(err) { parsed = null; }
 
-    if (!parsed || !Array.isArray(parsed) || parsed.length === 0) {
+    if (!parsed || !Array.isArray(parsed)) {
       entryList.innerHTML =
         '<div class="empty-state">' +
           '<i class="fas fa-triangle-exclamation" style="color:var(--danger);"></i>' +
@@ -1637,18 +1641,37 @@
       return;
     }
 
+    // Build parallel arrays: one entry + one photo per valid namecard,
+    // using array position (not LLM-reported index) for the photo mapping.
     function toNameCase(str) {
       if (!str) { return str; }
       return str.replace(/[^\s-]+/g, function(w) {
         return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
       });
     }
-    parsed.forEach(function(entry) {
+    var filteredEntries = [];
+    var filteredPhotos = [];
+    parsed.forEach(function(entry, idx) {
+      if (!entry || typeof entry !== "object") { return; }
       if (entry.last_name)  { entry.last_name  = toNameCase(entry.last_name);  }
       if (entry.first_name) { entry.first_name = toNameCase(entry.first_name); }
+      filteredEntries.push(entry);
+      filteredPhotos.push((dataUrls && dataUrls[idx]) ? dataUrls[idx] : null);
     });
-    state.tasks = parsed;
-    state.photoDataUrls = dataUrls || [];
+
+    if (filteredEntries.length === 0) {
+      entryList.innerHTML =
+        '<div class="empty-state">' +
+          '<i class="fas fa-triangle-exclamation" style="color:var(--danger);"></i>' +
+          '<p style="color:var(--danger); font-weight:600;">No entries extracted.</p>' +
+          '<p style="font-size:13px; margin-top:4px;">Try a different model or check photo quality.</p>' +
+        '</div>';
+      reviewActions.style.display = "flex";
+      return;
+    }
+
+    state.tasks = filteredEntries;
+    state.photoDataUrls = filteredPhotos;
 
     // Photo strip
     if (dataUrls && dataUrls.length > 0) {
@@ -1784,7 +1807,7 @@
 
       // Extra fields returned by LLM not in KNOWN_FIELDS
       Object.keys(entry).forEach(function(key) {
-        if (KNOWN_FIELDS.indexOf(key) !== -1 || key === "photo_index") { return; }
+        if (KNOWN_FIELDS.indexOf(key) !== -1) { return; }
         var val = (entry[key] !== undefined && entry[key] !== null) ? String(entry[key]) : "";
         if (val === "") { return; }
 
@@ -2024,9 +2047,7 @@
         if (resp.ok) {
           var created = await resp.json();
           ok++;
-          // Upload photo using photo_index returned by LLM
-          var photoIdx = (entry.photo_index !== undefined && entry.photo_index !== null) ? entry.photo_index : i;
-          if (state.photoDataUrls[photoIdx]) {
+          if (state.photoDataUrls[i]) {
             try {
               await fetch("https://graph.microsoft.com/v1.0/me/contacts/" + created.id + "/photo/$value", {
                 method: "PUT",
