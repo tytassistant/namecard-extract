@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Name Card Extract — Capture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="bg-pattern"></div>
+
+<div class="app-container">
+
+  <div class="header">
+    <div class="header-logo">
+      <div class="header-logo-icon"><i class="fas fa-address-card"></i></div>
+      <h1>Name Card Extract</h1>
+    </div>
+    <p>AI-powered business card reader</p>
+  </div>
+
+  <div style="margin-bottom:16px;">
+    <a href="/" class="nav-link"><i class="fas fa-arrow-left"></i> Back</a>
+  </div>
+
+  <div class="card">
+
+    <div class="field">
+      <label>Model</label>
+      <select id="modelSelect" style="font-family:'Bricolage Grotesque',sans-serif; font-size:15px; color:var(--text-primary); background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-sm); outline:none; cursor:pointer; padding:10px 12px; width:100%;">
+        {% for m in config.models %}
+        <option value="{{ m }}"{% if m == config.default_model %} selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Extra instruction <span style="font-weight:400; text-transform:none; letter-spacing:0;">(optional)</span></label>
+      <div class="smart-input-box">
+        <textarea id="extraInstruction" placeholder="e.g. focus on Japanese name cards, extract katakana readings" rows="2"></textarea>
+      </div>
+    </div>
+
+    <input type="file" id="photoInput" accept="image/*" multiple hidden>
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
+
+    <div class="upload-actions-row">
+      <label class="camera-btn" for="photoInput">
+        <i class="fas fa-images"></i>
+        <div>Upload Photos</div>
+      </label>
+      <label class="camera-btn" for="cameraInput">
+        <i class="fas fa-camera"></i>
+        <div>Take Photo</div>
+      </label>
+    </div>
+
+    <div id="photoCounter" style="font-size:13px; color:var(--text-secondary);">0 / 30 name cards selected</div>
+    <div class="photo-grid" id="photoGrid"></div>
+
+    <button class="btn btn-accent btn-block" id="extractBtn" type="button" disabled style="margin-top:16px;">
+      <i class="fas fa-wand-magic-sparkles"></i> Extract &amp; Save
+    </button>
+  </div>
+
+</div>
+
+<!-- Progress modal -->
+<div class="modal-overlay" id="progressModal">
+  <div class="modal-box">
+    <div class="spinner"></div>
+    <h3>Extracting name cards…</h3>
+    <p id="progressMsg">Uploading images to server</p>
+    <div class="elapsed" id="elapsedCounter">0s</div>
+    <p style="font-size:12px; color:var(--text-tertiary);">The AI is reading each card. This usually takes 20–40 seconds.</p>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+(function() {
+  "use strict";
+
+  if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+    document.documentElement.classList.add("dark");
+  }
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function(e) {
+    document.documentElement.classList[e.matches ? "add" : "remove"]("dark");
+  });
+
+  var selectedFiles = [];
+  var MAX_PHOTOS = 30;
+
+  var $id = function(id) { return document.getElementById(id); };
+
+  var extractBtn = $id("extractBtn");
+  var photoInput = $id("photoInput");
+  var cameraInput = $id("cameraInput");
+  var photoGrid = $id("photoGrid");
+  var photoCounter = $id("photoCounter");
+  var progressModal = $id("progressModal");
+  var progressMsg = $id("progressMsg");
+  var elapsedCounter = $id("elapsedCounter");
+
+  // ===== TOAST =====
+  function showToast(msg, type) {
+    var tc = $id("toastContainer");
+    var t = document.createElement("div");
+    t.className = "toast " + (type || "info");
+    t.textContent = msg;
+    tc.appendChild(t);
+    setTimeout(function() {
+      t.style.opacity = "0"; t.style.transition = "opacity 0.3s";
+      setTimeout(function() { t.remove(); }, 300);
+    }, 4000);
+  }
+
+  // ===== IMAGE COMPRESSION =====
+  function compressImageBlob(file, targetWidth) {
+    targetWidth = targetWidth || 900;
+    return new Promise(function(resolve, reject) {
+      if (file.type === "image/jpeg" && file.size <= 750000) return resolve(file);
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function() {
+        URL.revokeObjectURL(url);
+        var w = img.naturalWidth, h = img.naturalHeight;
+        if (w > targetWidth) { h = Math.round((targetWidth / w) * h); w = targetWidth; }
+        var canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        canvas.toBlob(function(blob) {
+          if (!blob) return reject(new Error("Compression failed"));
+          var name = file.name.replace(/\.[^.]+$/, ".jpg");
+          resolve(new File([blob], name, { type: "image/jpeg" }));
+        }, "image/jpeg", 1.0);
+      };
+      img.onerror = function() { URL.revokeObjectURL(url); reject(new Error("Image load failed.")); };
+      img.src = url;
+    });
+  }
+
+  // ===== PHOTO GRID =====
+  function updatePhotoCounter() {
+    photoCounter.textContent = selectedFiles.length + " / " + MAX_PHOTOS + " name cards selected";
+    var atMax = selectedFiles.length >= MAX_PHOTOS;
+    photoInput.disabled = atMax; cameraInput.disabled = atMax;
+    extractBtn.disabled = selectedFiles.length === 0;
+  }
+
+  function renderPhotoGrid() {
+    photoGrid.innerHTML = "";
+    selectedFiles.forEach(function(item, idx) {
+      var div = document.createElement("div");
+      div.className = "photo-item";
+      var img = document.createElement("img");
+      img.src = item.previewUrl; img.alt = "Card " + (idx + 1);
+      var btn = document.createElement("button");
+      btn.className = "remove-btn"; btn.type = "button";
+      btn.innerHTML = '<i class="fas fa-xmark"></i>';
+      btn.addEventListener("click", function() {
+        URL.revokeObjectURL(item.previewUrl);
+        selectedFiles.splice(idx, 1);
+        renderPhotoGrid(); updatePhotoCounter();
+      });
+      div.appendChild(img); div.appendChild(btn);
+      photoGrid.appendChild(div);
+    });
+    updatePhotoCounter();
+  }
+
+  function addPhotos(fileList) {
+    var toAdd = Array.from(fileList).filter(function(f) { return f.type.startsWith("image/"); });
+    if (!toAdd.length) return;
+    if (selectedFiles.length + toAdd.length > MAX_PHOTOS) {
+      showToast("Maximum " + MAX_PHOTOS + " photos allowed.", "error"); return;
+    }
+    toAdd.forEach(function(file) {
+      if (selectedFiles.some(function(f) { return f.file.name === file.name && f.file.size === file.size; })) return;
+      selectedFiles.push({ file: file, previewUrl: URL.createObjectURL(file) });
+    });
+    renderPhotoGrid();
+  }
+
+  photoInput.addEventListener("change", function() { if (this.files.length) { addPhotos(this.files); this.value = ""; } });
+  cameraInput.addEventListener("change", function() { if (this.files.length) { addPhotos(this.files); this.value = ""; } });
+
+  // ===== UPLOAD & POLL =====
+  extractBtn.addEventListener("click", async function() {
+    if (!selectedFiles.length) { showToast("Please select at least one photo.", "error"); return; }
+
+    var compressed = [];
+    for (var i = 0; i < selectedFiles.length; i++) {
+      try { compressed.push(await compressImageBlob(selectedFiles[i].file)); }
+      catch(e) { showToast("Photo " + (i+1) + ": " + e.message, "error"); }
+    }
+    if (!compressed.length) return;
+
+    progressModal.classList.add("open");
+    extractBtn.disabled = true;
+    progressMsg.textContent = "Uploading " + compressed.length + " image(s) to server…";
+    var startTime = Date.now();
+    var ticker = setInterval(function() {
+      elapsedCounter.textContent = Math.floor((Date.now() - startTime) / 1000) + "s";
+    }, 1000);
+
+    var fd = new FormData();
+    fd.append("model", $id("modelSelect").value);
+    fd.append("extra_instruction", $id("extraInstruction").value || "");
+    compressed.forEach(function(f) { fd.append("files", f, f.name); });
+
+    var sessionId;
+    try {
+      var resp = await fetch("/upload", { method: "POST", body: fd });
+      if (!resp.ok) {
+        var err = await resp.json().catch(function() { return {}; });
+        throw new Error(err.detail || "Upload failed (HTTP " + resp.status + ")");
+      }
+      var data = await resp.json();
+      sessionId = data.session_id;
+    } catch(e) {
+      clearInterval(ticker);
+      progressModal.classList.remove("open");
+      extractBtn.disabled = false;
+      showToast("Upload error: " + e.message, "error");
+      return;
+    }
+
+    progressMsg.textContent = "AI is reading the name cards…";
+    var pollInterval = setInterval(async function() {
+      try {
+        var pr = await fetch("/api/progress?session=" + sessionId);
+        var pd = await pr.json();
+        if (pd.phase === "complete") {
+          clearInterval(pollInterval); clearInterval(ticker);
+          progressModal.classList.remove("open");
+          window.location.href = "/results?session=" + sessionId;
+        } else if (pd.phase === "error") {
+          clearInterval(pollInterval); clearInterval(ticker);
+          progressModal.classList.remove("open");
+          extractBtn.disabled = false;
+          showToast("Extraction failed: " + (pd.error || "Unknown error"), "error");
+        }
+      } catch(e) { /* keep polling */ }
+    }, 3000);
+  });
+
+  renderPhotoGrid();
+
+})();
+</script>
+</body>
+</html>

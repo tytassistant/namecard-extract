@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Name Card Extract — Session History</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="bg-pattern"></div>
+
+<div class="app-container">
+
+  <div class="header">
+    <div class="header-logo">
+      <div class="header-logo-icon"><i class="fas fa-clock-rotate-left"></i></div>
+      <h1>Session History</h1>
+    </div>
+    <p>Past name card extraction sessions</p>
+  </div>
+
+  <div style="margin-bottom:20px;">
+    <a href="/" class="nav-link"><i class="fas fa-arrow-left"></i> New session</a>
+  </div>
+
+  <!-- Loading -->
+  <div id="loadingState" class="card" style="text-align:center; padding:40px 24px;">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading sessions…</div>
+  </div>
+
+  <!-- Empty state -->
+  <div id="emptyState" class="card" style="display:none; text-align:center; padding:60px 24px;">
+    <i class="fas fa-inbox" style="font-size:48px; color:var(--text-tertiary); display:block; margin-bottom:16px;"></i>
+    <p style="color:var(--text-secondary); font-family:'Source Serif 4',serif; font-style:italic; font-size:16px;">No sessions yet.</p>
+    <a href="/" class="btn btn-accent" style="margin-top:20px; display:inline-flex;">
+      <i class="fas fa-plus"></i> Start first session
+    </a>
+  </div>
+
+  <!-- Sessions table -->
+  <div id="summaryContent" style="display:none;" class="card" style="padding:0; overflow:hidden;">
+    <table class="summary-table" id="sessionsTable">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Session</th>
+          <th>Cards</th>
+          <th>Sync</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="sessionsBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Confirm overlay -->
+<div id="confirmOverlay" class="confirm-overlay" style="display:none;">
+  <div class="confirm-box">
+    <p id="confirmMsg"></p>
+    <div class="confirm-actions">
+      <button class="btn btn-outline btn-sm" id="confirmCancel">Cancel</button>
+      <button class="btn btn-danger btn-sm" id="confirmOk">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  "use strict";
+
+  if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+    document.documentElement.classList.add("dark");
+  }
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function(e) {
+    document.documentElement.classList[e.matches ? "add" : "remove"]("dark");
+  });
+
+  function escapeHtml(str) {
+    if (!str) return "";
+    var d = document.createElement("div"); d.textContent = str; return d.innerHTML;
+  }
+
+  function formatTimestamp(ts) {
+    if (!ts) return "—";
+    var s = String(ts).trim();
+    // ISO: 2026-06-27T10:00:00 → "2026-06-27 10:00"
+    return s.replace("T", " ").substring(0, 16);
+  }
+
+  function showToast(msg, type) {
+    var tc = document.getElementById("toastContainer");
+    var t = document.createElement("div");
+    t.className = "toast " + (type || "info"); t.textContent = msg;
+    tc.appendChild(t);
+    setTimeout(function() {
+      t.style.opacity = "0"; t.style.transition = "opacity 0.3s";
+      setTimeout(function() { t.remove(); }, 300);
+    }, 4000);
+  }
+
+  // Confirm dialog
+  var pendingConfirm = null;
+  document.getElementById("confirmCancel").addEventListener("click", function() {
+    document.getElementById("confirmOverlay").style.display = "none"; pendingConfirm = null;
+  });
+  document.getElementById("confirmOk").addEventListener("click", function() {
+    document.getElementById("confirmOverlay").style.display = "none";
+    if (pendingConfirm) { pendingConfirm(); pendingConfirm = null; }
+  });
+  function showConfirm(msg, cb) {
+    document.getElementById("confirmMsg").textContent = msg;
+    document.getElementById("confirmOverlay").style.display = "flex";
+    pendingConfirm = cb;
+  }
+
+  async function deleteSession(sessionId) {
+    showConfirm("Delete session " + sessionId + "? All uploaded images and extracted records will be permanently removed.", async function() {
+      try {
+        var resp = await fetch("/api/delete_session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: sessionId })
+        });
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        showToast("Session deleted.", "success");
+        loadSessions();
+      } catch(e) {
+        showToast("Delete failed: " + e.message, "error");
+      }
+    });
+  }
+
+  async function loadSessions() {
+    document.getElementById("loadingState").style.display = "";
+    document.getElementById("summaryContent").style.display = "none";
+    document.getElementById("emptyState").style.display = "none";
+
+    try {
+      var resp = await fetch("/api/list_sessions");
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      var sessions = await resp.json();
+
+      document.getElementById("loadingState").style.display = "none";
+
+      if (!sessions || sessions.length === 0) {
+        document.getElementById("emptyState").style.display = "";
+        return;
+      }
+
+      var tbody = document.getElementById("sessionsBody");
+      tbody.innerHTML = "";
+      sessions.forEach(function(s) {
+        var syncPills = "";
+        if (s.synced_ms) syncPills += '<span class="sync-pill ms">MS</span>';
+        if (s.synced_google) syncPills += '<span class="sync-pill google">G</span>';
+
+        var tr = document.createElement("tr");
+        tr.innerHTML =
+          '<td class="session-date">' + escapeHtml(formatTimestamp(s.timestamp)) + '</td>' +
+          '<td class="session-id">' + escapeHtml(s.session_id) + '</td>' +
+          '<td>' +
+            '<span style="font-weight:600; color:var(--text-primary);">' + s.total_extracted + '</span>' +
+            '<span style="color:var(--text-tertiary);"> / ' + s.total_uploaded + ' uploaded</span>' +
+          '</td>' +
+          '<td>' + (syncPills || '<span style="color:var(--text-tertiary); font-size:12px;">—</span>') + '</td>' +
+          '<td>' +
+            '<div class="table-actions">' +
+              '<a href="/results?session=' + encodeURIComponent(s.session_id) + '" class="btn btn-outline btn-sm"><i class="fas fa-eye"></i> View</a>' +
+              '<button class="btn btn-sm" style="background:var(--danger-light); color:var(--danger); border:none;" data-session="' + escapeHtml(s.session_id) + '"><i class="fas fa-trash"></i></button>' +
+            '</div>' +
+          '</td>';
+        tbody.appendChild(tr);
+        tr.querySelector("[data-session]").addEventListener("click", function() {
+          deleteSession(this.getAttribute("data-session"));
+        });
+      });
+
+      document.getElementById("summaryContent").style.display = "";
+    } catch(e) {
+      document.getElementById("loadingState").style.display = "none";
+      document.getElementById("emptyState").style.display = "";
+      showToast("Failed to load sessions: " + e.message, "error");
+    }
+  }
+
+  loadSessions();
+})();
+</script>
+</body>
+</html>
