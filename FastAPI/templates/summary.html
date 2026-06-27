@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Name Card Extract — Session History</title>
+<title>Name Card Extract</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -17,45 +17,30 @@
 
   <div class="header">
     <div class="header-logo">
-      <div class="header-logo-icon"><i class="fas fa-clock-rotate-left"></i></div>
-      <h1>Session History</h1>
+      <div class="header-logo-icon"><i class="fas fa-address-card"></i></div>
+      <h1>Name Card Extract</h1>
     </div>
-    <p>Past name card extraction sessions</p>
   </div>
 
-  <div style="margin-bottom:20px;">
-    <a href="/" class="nav-link"><i class="fas fa-arrow-left"></i> New session</a>
+  <div id="summaryContent" style="display:none;"></div>
+
+  <!-- Empty state -->
+  <div id="emptyState" class="card" style="display:none; text-align:center; padding:60px 24px;">
+    <i class="fas fa-inbox" style="font-size:48px; color:var(--text-tertiary); margin-bottom:16px;"></i>
+    <p style="color:var(--text-secondary); font-family:'Source Serif 4',serif; font-style:italic; font-size:16px;">No sessions yet.</p>
   </div>
 
   <!-- Loading -->
-  <div id="loadingState" class="card" style="text-align:center; padding:40px 24px;">
+  <div id="loadingState" class="card" style="text-align:center; padding:40px 24px; display:none;">
     <div class="spinner"></div>
     <div class="loading-text">Loading sessions…</div>
   </div>
 
-  <!-- Empty state -->
-  <div id="emptyState" class="card" style="display:none; text-align:center; padding:60px 24px;">
-    <i class="fas fa-inbox" style="font-size:48px; color:var(--text-tertiary); display:block; margin-bottom:16px;"></i>
-    <p style="color:var(--text-secondary); font-family:'Source Serif 4',serif; font-style:italic; font-size:16px;">No sessions yet.</p>
-    <a href="/" class="btn btn-accent" style="margin-top:20px; display:inline-flex;">
-      <i class="fas fa-plus"></i> Start first session
+  <!-- Capture button -->
+  <div class="card" style="text-align:center; padding:24px; margin-top:32px;">
+    <a href="/capture" class="btn btn-accent btn-block" style="text-decoration:none;">
+      <i class="fas fa-camera"></i> Capture New
     </a>
-  </div>
-
-  <!-- Sessions table -->
-  <div id="summaryContent" style="display:none;" class="card" style="padding:0; overflow:hidden;">
-    <table class="summary-table" id="sessionsTable">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Session</th>
-          <th>Cards</th>
-          <th>Sync</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="sessionsBody"></tbody>
-    </table>
   </div>
 
 </div>
@@ -91,9 +76,7 @@
 
   function formatTimestamp(ts) {
     if (!ts) return "—";
-    var s = String(ts).trim();
-    // ISO: 2026-06-27T10:00:00 → "2026-06-27 10:00"
-    return s.replace("T", " ").substring(0, 16);
+    return String(ts).trim().replace("T", " ").substring(0, 16);
   }
 
   function showToast(msg, type) {
@@ -107,7 +90,6 @@
     }, 4000);
   }
 
-  // Confirm dialog
   var pendingConfirm = null;
   document.getElementById("confirmCancel").addEventListener("click", function() {
     document.getElementById("confirmOverlay").style.display = "none"; pendingConfirm = null;
@@ -122,7 +104,7 @@
     pendingConfirm = cb;
   }
 
-  async function deleteSession(sessionId) {
+  window._deleteSession = function(sessionId) {
     showConfirm("Delete session " + sessionId + "? All uploaded images and extracted records will be permanently removed.", async function() {
       try {
         var resp = await fetch("/api/delete_session", {
@@ -137,10 +119,10 @@
         showToast("Delete failed: " + e.message, "error");
       }
     });
-  }
+  };
 
   async function loadSessions() {
-    document.getElementById("loadingState").style.display = "";
+    document.getElementById("loadingState").style.display = "block";
     document.getElementById("summaryContent").style.display = "none";
     document.getElementById("emptyState").style.display = "none";
 
@@ -149,46 +131,45 @@
       if (!resp.ok) throw new Error("HTTP " + resp.status);
       var sessions = await resp.json();
 
-      document.getElementById("loadingState").style.display = "none";
-
       if (!sessions || sessions.length === 0) {
-        document.getElementById("emptyState").style.display = "";
+        document.getElementById("emptyState").style.display = "block";
         return;
       }
 
-      var tbody = document.getElementById("sessionsBody");
-      tbody.innerHTML = "";
+      var rows = "";
       sessions.forEach(function(s) {
-        var syncPills = "";
-        if (s.synced_ms) syncPills += '<span class="sync-pill ms">MS</span>';
-        if (s.synced_google) syncPills += '<span class="sync-pill google">G</span>';
-
-        var tr = document.createElement("tr");
-        tr.innerHTML =
-          '<td class="session-date">' + escapeHtml(formatTimestamp(s.timestamp)) + '</td>' +
-          '<td class="session-id">' + escapeHtml(s.session_id) + '</td>' +
-          '<td>' +
-            '<span style="font-weight:600; color:var(--text-primary);">' + s.total_extracted + '</span>' +
-            '<span style="color:var(--text-tertiary);"> / ' + s.total_uploaded + ' uploaded</span>' +
-          '</td>' +
-          '<td>' + (syncPills || '<span style="color:var(--text-tertiary); font-size:12px;">—</span>') + '</td>' +
-          '<td>' +
-            '<div class="table-actions">' +
-              '<a href="/results?session=' + encodeURIComponent(s.session_id) + '" class="btn btn-outline btn-sm"><i class="fas fa-eye"></i> View</a>' +
-              '<button class="btn btn-sm" style="background:var(--danger-light); color:var(--danger); border:none;" data-session="' + escapeHtml(s.session_id) + '"><i class="fas fa-trash"></i></button>' +
-            '</div>' +
-          '</td>';
-        tbody.appendChild(tr);
-        tr.querySelector("[data-session]").addEventListener("click", function() {
-          deleteSession(this.getAttribute("data-session"));
-        });
+        var synced = s.synced_google || s.synced_ms;
+        rows += "<tr>" +
+          "<td>" + escapeHtml(formatTimestamp(s.timestamp)) + "</td>" +
+          "<td>" + escapeHtml(s.session_id) + "</td>" +
+          "<td><div>Cards: " + s.total_extracted + "</div><div>Sync: " + (synced ? "Y" : "N") + "</div></td>" +
+          "<td style=\"text-align:center; vertical-align:middle;\">" +
+            "<a href=\"/results?session=" + encodeURIComponent(s.session_id) + "\" class=\"status-success\"><i class=\"fas fa-folder-open\" style=\"font-size:14px;\"></i></a>" +
+            "<span onclick=\"_deleteSession('" + escapeHtml(s.session_id) + "')\" class=\"status-danger\" style=\"cursor:pointer;\"><i class=\"fas fa-trash\" style=\"font-size:14px;\"></i></span>" +
+          "</td>" +
+        "</tr>";
       });
 
-      document.getElementById("summaryContent").style.display = "";
+      var summaryEl = document.getElementById("summaryContent");
+      summaryEl.innerHTML = "<div class=\"card\">" +
+        "<div class=\"card-title\"><i class=\"fas fa-clock-rotate-left\" style=\"margin-right:6px;\"></i> Session History</div>" +
+        "<table class=\"results-table\">" +
+          "<thead><tr>" +
+            "<th style=\"width:30%;\">Date</th>" +
+            "<th style=\"width:25%;\">Session</th>" +
+            "<th style=\"width:25%;\">Overview</th>" +
+            "<th style=\"width:20%; text-align:center;\">Actions</th>" +
+          "</tr></thead>" +
+          "<tbody>" + rows + "</tbody>" +
+        "</table>" +
+      "</div>";
+      summaryEl.style.display = "block";
+
     } catch(e) {
-      document.getElementById("loadingState").style.display = "none";
-      document.getElementById("emptyState").style.display = "";
+      document.getElementById("emptyState").style.display = "block";
       showToast("Failed to load sessions: " + e.message, "error");
+    } finally {
+      document.getElementById("loadingState").style.display = "none";
     }
   }
 
